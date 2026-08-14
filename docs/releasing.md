@@ -9,14 +9,14 @@ Snapshot date: 2026-08-14.
 
 | Area | Current state | Required before public release |
 | --- | --- | --- |
-| GitHub repository | Final target is `mapleluvr/cu`; no remote repository exists yet | Create a private staging repository, add only `main`, and verify the final visibility change before launch |
-| License | MIT license and attribution are present | Recheck GitHub license detection after the first push |
-| Public documentation | README, versioned contracts, contributing, security, changelog, release, and GitHub community documents are present with final owner-specific URLs | Recheck rendered links after the repository exists |
-| Security reporting | Policy is committed but GitHub private vulnerability reporting cannot be configured before repository creation | Enable reporting and verify the public report route before publishing the prerelease |
-| CI | A least-privilege pinned Windows workflow is committed | Require a successful hosted run at the exact release commit |
-| Branch policy | No remote repository exists yet | Add a `main` ruleset after the hosted check name is known |
-| Worktree | Release tree is clean; local `NUL` and `docs/reviews/` evidence are ignored and unchanged | Push only curated `main`; never publish the local-only branch or ignored evidence |
-| Final verification | Non-live L3 passed 502 tests with one environment-blocked file-symlink case; all four installed-command E2E suites passed | Keep the file-symlink and isolated full-desktop gates explicitly blocked in this preview |
+| GitHub repository | Private staging repository `mapleluvr/cu` exists; `origin` is restricted to curated `main` | Review and apply the final public visibility change only after the remaining controls pass |
+| License | GitHub detects the committed MIT license | Recheck detection after public visibility is applied |
+| Public documentation | README, versioned contracts, contributing, security, changelog, release notes, and GitHub community documents are present with final URLs | Recheck rendered links on the final public commit |
+| Security reporting | Policy is committed; the repository is still private staging | Enable private vulnerability reporting immediately after public visibility and verify the unauthenticated report route |
+| CI | The first least-privilege Windows hosted run passed; action pins are being advanced to reviewed Node 24-runtime SHAs | Require a clean hosted run at the exact release commit |
+| Branch policy | Remote `main` exists without a protection rule during staging | Add a `main` ruleset requiring the final hosted check before tagging |
+| Worktree | Curated public-history `main` contains no private-history ancestry; local `NUL` and `docs/reviews/` evidence are ignored and unchanged | Push only curated `main`; never publish the local-only branch, private history bundle, or ignored evidence |
+| Final verification | Non-live L3 discovered 503 tests: 502 passed, zero failed, and one file-symlink case was environment-blocked; all four installed-command E2E suites passed | Keep the file-symlink and isolated full-desktop gates explicitly blocked in this preview |
 | npm metadata | GitHub URLs and a strict runtime allowlist are present; `private: true` remains set | Keep registry publication out of this release and decide any future scoped npm identity separately |
 | npm name | Unscoped `cu` is already occupied on npm | Use a scoped package name for any future npm publication |
 | npm payload | A generated 35-file candidate matched the allowlist and passed exact-artifact installation smoke tests | Regenerate once from the final tag commit, verify exact set and SHA-256, and attach only that tarball |

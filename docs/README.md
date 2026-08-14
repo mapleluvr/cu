@@ -13,6 +13,8 @@ for exact schemas, state transitions, and design decisions.
 - [v1 Specification](specification/v1/README.md): normative scope and contract index.
 - [Publishing and Release Checklist](releasing.md): GitHub source-release and optional
   npm-package preparation gates.
+- [v1.0.0-preview.1 Release Notes](releases/v1.0.0-preview.1.md): shipped scope,
+  verification, artifacts, and explicit preview limitations.
 
 ## Normative Contracts
 
@@ -36,6 +38,7 @@ for exact schemas, state transitions, and design decisions.
 - [Security Policy](../SECURITY.md)
 - [Changelog](../CHANGELOG.md)
 - [Publishing and Release Checklist](releasing.md)
+- [v1.0.0-preview.1 Release Notes](releases/v1.0.0-preview.1.md)
 
 ## Reading Rules
 
