@@ -9,12 +9,12 @@ Snapshot date: 2026-08-14.
 
 | Area | Current state | Required before public release |
 | --- | --- | --- |
-| GitHub repository | Private staging repository `mapleluvr/cu` exists; `origin` is restricted to curated `main` | Review and apply the final public visibility change only after the remaining controls pass |
-| License | GitHub detects the committed MIT license | Recheck detection after public visibility is applied |
+| GitHub repository | `mapleluvr/cu` is public; `origin` is restricted to curated `main` | Recheck rendered metadata and links after the tag and release exist |
+| License | GitHub detects the committed MIT license | Recheck detection on the release page |
 | Public documentation | README, versioned contracts, contributing, security, changelog, release notes, and GitHub community documents are present with final URLs | Recheck rendered links on the final public commit |
-| Security reporting | Policy is committed; the repository is still private staging | Enable private vulnerability reporting immediately after public visibility and verify the unauthenticated report route |
-| CI | The first least-privilege Windows hosted run passed; action pins are being advanced to reviewed Node 24-runtime SHAs | Require a clean hosted run at the exact release commit |
-| Branch policy | Remote `main` exists without a protection rule during staging | Add a `main` ruleset requiring the final hosted check before tagging |
+| Security reporting | GitHub reports private vulnerability reporting enabled; an unauthenticated request reaches sign-in with the exact advisory/new return path | Recheck the route after the release exists |
+| CI | Hosted run `31824689466` passed all steps at `f1506d9` with reviewed Node 24-runtime action SHAs and no annotations | Require a clean hosted run at the exact release commit |
+| Branch policy | Public `main` remains unprotected until the final hosted check is known | Add a `main` ruleset requiring that check before tagging |
 | Worktree | Curated public-history `main` contains no private-history ancestry; local `NUL` and `docs/reviews/` evidence are ignored and unchanged | Push only curated `main`; never publish the local-only branch, private history bundle, or ignored evidence |
 | Final verification | Non-live L3 discovered 503 tests: 502 passed, zero failed, and one file-symlink case was environment-blocked; all four installed-command E2E suites passed | Keep the file-symlink and isolated full-desktop gates explicitly blocked in this preview |
 | npm metadata | GitHub URLs and a strict runtime allowlist are present; `private: true` remains set | Keep registry publication out of this release and decide any future scoped npm identity separately |
@@ -56,8 +56,10 @@ not create or publish itself automatically.
       disabled unless a deliberate alternative intake route is documented.
 - [ ] Decide whether to adopt a code of conduct and name a moderation contact before
       actively soliciting outside contributions.
-- [ ] Enable private vulnerability reporting under the Security settings and verify from
-      a non-owner account that the private report form opens.
+- [ ] Enable private vulnerability reporting under the Security settings, confirm the
+      GitHub API reports it enabled, and verify that an unauthenticated request to
+      `/OWNER/REPOSITORY/security/advisories/new` redirects to sign-in while preserving
+      that exact return path.
 - [ ] Set Actions permissions to the least privilege needed by CI.
 - [ ] Add branch protection or a ruleset for `main` after required checks exist.
 - [ ] Disable unused Wiki, Projects, or Discussions features unless they have an owner.

@@ -17,9 +17,11 @@ Do not report a suspected vulnerability in a public issue, discussion, pull requ
 shared capture artifact.
 
 GitHub private vulnerability reporting is the supported reporting channel and a public
-launch prerequisite. Before launch, the repository owner must enable it and verify from
-a non-owner account that **Security -> Report a vulnerability** opens a private report.
-After launch, use that control for all vulnerability details.
+launch prerequisite. Before launch, the repository owner must enable it, confirm that
+the GitHub API reports it enabled, and make an unauthenticated request to
+`/mapleluvr/cu/security/advisories/new`. The request must redirect to sign-in while
+preserving that exact path as its return target. After launch, sign in and use
+**Security -> Report a vulnerability** for all vulnerability details.
 
 If the control is temporarily unavailable, do not send vulnerability details through a
 public issue, discussion, pull request, or unspecified profile contact. Wait until the
