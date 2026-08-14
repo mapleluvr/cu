@@ -1,0 +1,10 @@
+node_modules/
+dist/
+coverage/
+.cu/
+.pi-subagents/
+.superpowers/
+docs/reviews/
+NUL
+*.log
+*.tgz

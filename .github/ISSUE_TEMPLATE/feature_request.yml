@@ -1,0 +1,53 @@
+name: Feature request
+description: Propose a scoped capability or contract improvement
+title: "[Feature] "
+body:
+  - type: markdown
+    attributes:
+      value: >-
+        Describe the user problem first. Public syntax, durable state, input authority,
+        archive behavior, and safety-boundary changes require explicit contract
+        treatment. Do not include captures, raw typed text, credentials, private `.cu/`
+        state, helper paths, process IDs, or window handles. Report vulnerabilities and
+        unexpected or unconfined effects privately using SECURITY.md.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What workflow is blocked or unnecessarily costly?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed behavior
+      description: Include command and receipt examples when relevant. Use synthetic data.
+    validations:
+      required: true
+  - type: textarea
+    id: safety
+    attributes:
+      label: Safety and state impact
+      description: >-
+        Explain effects on observation authority, input, no-replay behavior, locks,
+        cleanup, confinement, privacy, and durable records.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Include a no-change or caller-side workaround when one exists.
+    validations:
+      required: true
+  - type: checkboxes
+    id: boundaries
+    attributes:
+      label: Scope acknowledgement
+      options:
+        - label: I am not proposing silent replay after an uncertain effect.
+          required: true
+        - label: I have not included captures, raw typed text, credentials, private `.cu/` state, helper paths, process IDs, or window handles.
+          required: true
+        - label: This is not a vulnerability report or an unexpected or unconfined effect; those belong in the private SECURITY.md route.
+          required: true

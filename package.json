@@ -1,0 +1,56 @@
+{
+  "name": "cu",
+  "version": "1.0.0-preview.1",
+  "private": true,
+  "description": "Evidence-bound Computer Use CLI for Windows",
+  "keywords": [
+    "windows",
+    "cli",
+    "computer-use",
+    "automation"
+  ],
+  "homepage": "https://github.com/mapleluvr/cu#readme",
+  "bugs": {
+    "url": "https://github.com/mapleluvr/cu/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mapleluvr/cu.git"
+  },
+  "type": "module",
+  "license": "MIT",
+  "os": [
+    "win32"
+  ],
+  "engines": {
+    "node": ">=22.19.0"
+  },
+  "files": [
+    "dist/src/*.js",
+    "dist/helper/windows-capture.ps1",
+    "dist/helper/windows-input.ps1",
+    "README.md",
+    "LICENSE"
+  ],
+  "bin": {
+    "cu": "./dist/src/cli.js"
+  },
+  "scripts": {
+    "clean": "node scripts/clean.mjs",
+    "build": "npm run clean && tsc -p tsconfig.json && node scripts/copy-assets.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test:ci": "npm run build && node --test dist/test/action-file.test.js dist/test/strict-json.test.js dist/test/observation-record.test.js dist/test/effect-journal.test.js dist/test/effect-plan.test.js dist/test/history-event.test.js dist/test/archive-transaction.test.js dist/test/png.test.js dist/test/capture-bundle.test.js",
+    "smoke:ci": "node scripts/ci-smoke.mjs",
+    "test": "npm run build && node --test dist/test/init-help.e2e.test.js dist/test/status.e2e.test.js dist/test/regular-file.test.js dist/test/run-status.e2e.test.js dist/test/run-store.test.js dist/test/run-lock-concurrency.test.js dist/test/action-file.test.js dist/test/action-input.test.js dist/test/strict-json.test.js dist/test/observation-record.test.js dist/test/effect-journal.test.js dist/test/effect-plan.test.js dist/test/effect-store.test.js dist/test/effect-archive-resolution.test.js dist/test/history-event.test.js dist/test/archive-transaction.test.js dist/test/archive-store.test.js dist/test/archive-layout.test.js dist/test/png.test.js dist/test/capture-bundle.test.js dist/test/windows-display.test.js dist/test/windows-capture-parent.test.js dist/test/windows-capture-helper.test.js dist/test/windows-input-parent.test.js dist/test/windows-input-helper.test.js dist/test/windows-input-timing.test.js dist/test/observation-archive.test.js dist/test/archive-query.test.js dist/test/status-query.test.js dist/test/archive-cleanup.test.js dist/test/observation-archive-clear.test.js dist/test/observe-cli.test.js dist/test/act.test.js dist/test/act-cli.test.js dist/test/history-cli.test.js dist/test/clear-cli.test.js",
+    "test:observe-region:e2e": "npm run build && node --test dist/test/observe-region.public-e2e.test.js",
+    "test:act-controlled:e2e": "npm run build && node --test --test-concurrency=1 dist/test/act-controlled.public-e2e.test.js",
+    "test:archive-admin:e2e": "npm run build && node --test --test-concurrency=1 dist/test/archive-admin.public-e2e.test.js",
+    "test:help-status:e2e": "npm run build && node --test --test-concurrency=1 dist/test/help-status.public-e2e.test.js",
+    "check": "npm run typecheck && npm test",
+    "prepack": "npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "22.15.0",
+    "typescript": "5.9.3"
+  }
+}

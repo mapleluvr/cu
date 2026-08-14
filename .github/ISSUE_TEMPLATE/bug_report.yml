@@ -1,0 +1,83 @@
+name: Bug report
+description: Report a reproducible non-sensitive defect
+title: "[Bug] "
+body:
+  - type: markdown
+    attributes:
+      value: >-
+        Do not include secrets, personal screenshots, raw typed text, private `.cu/`
+        archives, helper paths, process IDs, or window handles. Unexpected or
+        unconfined effects are security reports: stop reproduction and report them
+        privately using SECURITY.md.
+  - type: checkboxes
+    id: security
+    attributes:
+      label: Security check
+      options:
+        - label: This is not a vulnerability report or sensitive disclosure.
+          required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version or commit
+      description: Release tag or full commit ID.
+      placeholder: v0.1.0 or 0123456789abcdef...
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+      placeholder: Windows 11 24H2, build ...
+    validations:
+      required: true
+  - type: input
+    id: runtime
+    attributes:
+      label: Node.js and PowerShell versions
+      placeholder: Node.js 22.19.0; Windows PowerShell 5.1
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Command shape
+      description: Use synthetic run IDs, paths, coordinates, and action data.
+      render: powershell
+    validations:
+      required: true
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed behavior
+      description: Include sanitized receipt kind, error code, and exit code.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Minimal reproduction
+      description: Use a disposable workspace and synthetic content.
+    validations:
+      required: true
+  - type: dropdown
+    id: effects
+    attributes:
+      label: Effects involved
+      options:
+        - No capture or native input
+        - Regional capture only
+        - Controlled target/decoy native input
+    validations:
+      required: true
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional sanitized context
+      description: Do not attach personal captures or repository-local `.cu/` state.
