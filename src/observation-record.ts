@@ -1,8 +1,6 @@
 import { isRunId } from "./identifiers.js";
-import {
-  parseStrictJsonBytes,
-  type StrictJsonObject
-} from "./strict-json.js";
+import { isValidObservationExpiry } from "./observation-expiry.js";
+import { parseStrictJsonBytes, type StrictJsonObject } from "./strict-json.js";
 
 const MAX_RECORD_BYTES = 65_536;
 const MAX_JSON_DEPTH = 64;
@@ -18,7 +16,7 @@ const captureSidecarKeys = [
   "source",
   "environmentFingerprint",
   "topologyFingerprint",
-  "image"
+  "image",
 ];
 const captureSourceKeys = [
   "captureKind",
@@ -26,9 +24,15 @@ const captureSourceKeys = [
   "leftPx",
   "topPx",
   "widthPx",
-  "heightPx"
+  "heightPx",
 ];
-const captureImageKeys = ["mediaType", "sha256", "byteLength", "width", "height"];
+const captureImageKeys = [
+  "mediaType",
+  "sha256",
+  "byteLength",
+  "width",
+  "height",
+];
 const actionableLiveKeys = [
   "kind",
   "schemaVersion",
@@ -45,7 +49,7 @@ const actionableLiveKeys = [
   "topologyFingerprint",
   "image",
   "state",
-  "stateChangedAt"
+  "stateChangedAt",
 ];
 const consumedLiveKeys = [...actionableLiveKeys, "consumedByEffectId"];
 const tombstoneLiveKeys = [
@@ -57,7 +61,7 @@ const tombstoneLiveKeys = [
   "previousLiveRecordSha256",
   "invalidatedReason",
   "invalidatedAt",
-  "invalidatedByTransactionId"
+  "invalidatedByTransactionId",
 ];
 const MAX_IMAGE_BYTES = 67_108_864;
 const MAX_PIXEL_DIMENSION = 32_768;
@@ -92,9 +96,15 @@ export type CaptureImage = {
   height: number;
 };
 
-function hasExactKeys(value: StrictJsonObject, keys: readonly string[]): boolean {
+function hasExactKeys(
+  value: StrictJsonObject,
+  keys: readonly string[],
+): boolean {
   const actual = Object.keys(value);
-  return actual.length === keys.length && keys.every((key) => Object.hasOwn(value, key));
+  return (
+    actual.length === keys.length &&
+    keys.every((key) => Object.hasOwn(value, key))
+  );
 }
 
 function requireObject(value: unknown): StrictJsonObject {
@@ -104,8 +114,17 @@ function requireObject(value: unknown): StrictJsonObject {
   return value as StrictJsonObject;
 }
 
-function isIntegerInRange(value: unknown, minimum: number, maximum: number): boolean {
-  return typeof value === "number" && Number.isSafeInteger(value) && value >= minimum && value <= maximum;
+function isIntegerInRange(
+  value: unknown,
+  minimum: number,
+  maximum: number,
+): boolean {
+  return (
+    typeof value === "number" &&
+    Number.isSafeInteger(value) &&
+    value >= minimum &&
+    value <= maximum
+  );
 }
 
 function isCanonicalTimestamp(value: unknown): value is string {
@@ -121,7 +140,7 @@ function isCanonicalTimestamp(value: unknown): value is string {
 
 function hasCanonicalRecordBinding(
   root: StrictJsonObject,
-  expected: RecordBinding
+  expected: RecordBinding,
 ): boolean {
   return (
     typeof root.runId === "string" &&
@@ -141,7 +160,7 @@ function hasValidCaptureMetadata(
   root: StrictJsonObject,
   source: StrictJsonObject,
   image: StrictJsonObject,
-  expected: RecordBinding
+  expected: RecordBinding,
 ): boolean {
   return (
     hasExactKeys(source, captureSourceKeys) &&
@@ -150,8 +169,7 @@ function hasValidCaptureMetadata(
     typeof root.observationId === "string" &&
     observationIdPattern.test(root.observationId) &&
     isCanonicalTimestamp(root.capturedAt) &&
-    isCanonicalTimestamp(root.expiresAt) &&
-    new Date(root.expiresAt).getTime() === new Date(root.capturedAt).getTime() + 60_000 &&
+    isValidObservationExpiry(root.capturedAt, root.expiresAt) &&
     root.coordinateSpace === "normalized_999_top_left" &&
     (source.captureKind === "full" || source.captureKind === "region") &&
     source.mapping === "normalized_endpoint_centers/v1" &&
@@ -176,7 +194,7 @@ function parseRecordObject(bytes: Uint8Array): StrictJsonObject {
   try {
     const value = parseStrictJsonBytes(bytes, {
       maxBytes: MAX_RECORD_BYTES,
-      maxDepth: MAX_JSON_DEPTH
+      maxDepth: MAX_JSON_DEPTH,
     });
     return requireObject(value);
   } catch {
@@ -191,7 +209,7 @@ export type CaptureSidecar = {
   workspaceFingerprint: string;
   observationId: string;
   capturedAt: string;
-  expiresAt: string;
+  expiresAt: string | null;
   coordinateSpace: "normalized_999_top_left";
   source: CaptureSource;
   environmentFingerprint: string;
@@ -208,7 +226,7 @@ type BundleBoundLiveObservationBase = {
   publishedByTransactionId: string;
   captureMetadataSha256: string;
   capturedAt: string;
-  expiresAt: string;
+  expiresAt: string | null;
   coordinateSpace: "normalized_999_top_left";
   source: CaptureSource;
   environmentFingerprint: string;
@@ -217,14 +235,16 @@ type BundleBoundLiveObservationBase = {
   stateChangedAt: string;
 };
 
-export type ActionableBundleBoundLiveObservation = BundleBoundLiveObservationBase & {
-  state: "actionable";
-};
+export type ActionableBundleBoundLiveObservation =
+  BundleBoundLiveObservationBase & {
+    state: "actionable";
+  };
 
-export type ConsumedBundleBoundLiveObservation = BundleBoundLiveObservationBase & {
-  state: "consumed";
-  consumedByEffectId: string;
-};
+export type ConsumedBundleBoundLiveObservation =
+  BundleBoundLiveObservationBase & {
+    state: "consumed";
+    consumedByEffectId: string;
+  };
 
 export type BundleBoundLiveObservation =
   | ActionableBundleBoundLiveObservation
@@ -242,11 +262,13 @@ export type LiveObservationTombstone = {
   invalidatedByTransactionId: string | null;
 };
 
-export type LiveObservation = BundleBoundLiveObservation | LiveObservationTombstone;
+export type LiveObservation =
+  | BundleBoundLiveObservation
+  | LiveObservationTombstone;
 
 export function parseCaptureSidecarBytes(
   bytes: Uint8Array,
-  expected: RecordBinding
+  expected: RecordBinding,
 ): CaptureSidecar {
   const root = parseRecordObject(bytes);
   if (!hasExactKeys(root, captureSidecarKeys)) {
@@ -269,7 +291,7 @@ export function parseCaptureSidecarBytes(
     workspaceFingerprint: root.workspaceFingerprint as string,
     observationId: root.observationId as string,
     capturedAt: root.capturedAt as string,
-    expiresAt: root.expiresAt as string,
+    expiresAt: root.expiresAt as string | null,
     coordinateSpace: root.coordinateSpace as "normalized_999_top_left",
     source: {
       captureKind: source.captureKind as "full" | "region",
@@ -277,7 +299,7 @@ export function parseCaptureSidecarBytes(
       leftPx: source.leftPx as number,
       topPx: source.topPx as number,
       widthPx: source.widthPx as number,
-      heightPx: source.heightPx as number
+      heightPx: source.heightPx as number,
     },
     environmentFingerprint: root.environmentFingerprint as string,
     topologyFingerprint: root.topologyFingerprint as string,
@@ -286,15 +308,15 @@ export function parseCaptureSidecarBytes(
       sha256: image.sha256 as string,
       byteLength: image.byteLength as number,
       width: image.width as number,
-      height: image.height as number
-    }
+      height: image.height as number,
+    },
   };
 }
 
 export function validateBundleBoundLiveObservation(
   live: BundleBoundLiveObservation,
   capture: CaptureSidecar,
-  captureMetadataSha256: string
+  captureMetadataSha256: string,
 ): void {
   if (
     !sha256Pattern.test(captureMetadataSha256) ||
@@ -325,7 +347,7 @@ export function validateBundleBoundLiveObservation(
 
 export function parseLiveObservationBytes(
   bytes: Uint8Array,
-  expected: RecordBinding
+  expected: RecordBinding,
 ): LiveObservation {
   const root = parseRecordObject(bytes);
   if (root.kind === "cu.live-observation-tombstone/v1") {
@@ -344,7 +366,8 @@ export function parseLiveObservationBytes(
       (root.invalidatedByTransactionId !== null &&
         (typeof root.invalidatedByTransactionId !== "string" ||
           !transactionIdPattern.test(root.invalidatedByTransactionId))) ||
-      (root.invalidatedReason === "cleared" && root.invalidatedByTransactionId === null) ||
+      (root.invalidatedReason === "cleared" &&
+        root.invalidatedByTransactionId === null) ||
       ((root.invalidatedReason === "expired" ||
         root.invalidatedReason === "environment_changed") &&
         root.invalidatedByTransactionId !== null)
@@ -363,7 +386,9 @@ export function parseLiveObservationBytes(
         | "environment_changed"
         | "cleared",
       invalidatedAt: root.invalidatedAt as string,
-      invalidatedByTransactionId: root.invalidatedByTransactionId as string | null
+      invalidatedByTransactionId: root.invalidatedByTransactionId as
+        | string
+        | null,
     };
   }
   const isActionable = root.state === "actionable";
@@ -403,7 +428,7 @@ export function parseLiveObservationBytes(
     publishedByTransactionId: root.publishedByTransactionId as string,
     captureMetadataSha256: root.captureMetadataSha256 as string,
     capturedAt: root.capturedAt as string,
-    expiresAt: root.expiresAt as string,
+    expiresAt: root.expiresAt as string | null,
     coordinateSpace: root.coordinateSpace as "normalized_999_top_left",
     source: {
       captureKind: source.captureKind as "full" | "region",
@@ -411,7 +436,7 @@ export function parseLiveObservationBytes(
       leftPx: source.leftPx as number,
       topPx: source.topPx as number,
       widthPx: source.widthPx as number,
-      heightPx: source.heightPx as number
+      heightPx: source.heightPx as number,
     },
     environmentFingerprint: root.environmentFingerprint as string,
     topologyFingerprint: root.topologyFingerprint as string,
@@ -420,9 +445,9 @@ export function parseLiveObservationBytes(
       sha256: image.sha256 as string,
       byteLength: image.byteLength as number,
       width: image.width as number,
-      height: image.height as number
+      height: image.height as number,
     },
-    stateChangedAt: root.stateChangedAt as string
+    stateChangedAt: root.stateChangedAt as string,
   };
   if (isActionable) {
     return { ...common, state: "actionable" };
@@ -430,6 +455,6 @@ export function parseLiveObservationBytes(
   return {
     ...common,
     state: "consumed",
-    consumedByEffectId: root.consumedByEffectId as string
+    consumedByEffectId: root.consumedByEffectId as string,
   };
 }

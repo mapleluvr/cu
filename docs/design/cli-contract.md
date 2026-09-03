@@ -60,7 +60,7 @@ topology returns `display_unavailable` with exit code 3.
 ### `cu observe <run_id>`
 
 ```text
-cu observe <run_id> [--region <normalized-or-pixel-rectangle>] [--display <display_id>] [--json]
+cu observe <run_id> [--region <normalized-or-pixel-rectangle> [--display <display_id>] | --full-screen <display_id[,display_id...]>] [--ttl <seconds|unlimited>] [--json]
 ```
 
 Creates the run atomically on first use, captures the requested desktop scope, validates
@@ -74,7 +74,7 @@ the result, writes a capture and a new current live observation record, and retu
   "imagePath": ".cu/work-a/captures/obs_0123456789abcdef0123456789abcdef.png",
   "coordinateSpace": "normalized_999_top_left",
   "capturedAt": "2026-07-23T00:00:00.000Z",
-  "expiresAt": "2026-07-23T00:01:00.000Z",
+  "expiresAt": "2026-07-23T00:05:00.000Z",
   "actionable": true,
   "evictedHistoryCount": 0
 }
@@ -87,6 +87,17 @@ and must resolve wholly inside the selected display bounds. The capture helper
 recomputes the topology-bound display ID before reading pixels, and the parent
 independently repeats the resolution from the returned topology. A stale ID,
 cross-display region, or topology race publishes no observation.
+
+`--full-screen` captures whole displays instead of a sub-region. It requires one or
+more topology-bound display IDs from `cu displays`, comma-separated for multiple
+screens, and is mutually exclusive with `--region` and `--display`. There is no
+implicit current-desktop target: the screens being captured must be named. The
+capture is labeled `captureKind: "full"` in its sidecar, and `act` checkpoint captures
+rebuild the same explicit screen selection from the consumed observation.
+
+`--ttl` sets the observation lifetime in positive whole seconds, or `unlimited`
+(`expiresAt` is `null`). The default is 300 seconds; a checkpoint observation inherits
+the TTL of the observation it replaced.
 
 ### `cu act <run_id> --action-file <path|->`
 

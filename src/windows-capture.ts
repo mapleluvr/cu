@@ -1,18 +1,13 @@
 import { spawnSync } from "node:child_process";
 import { createHash, randomBytes } from "node:crypto";
-import {
-  lstatSync,
-  mkdtempSync,
-  realpathSync,
-  rmSync
-} from "node:fs";
+import { lstatSync, mkdtempSync, realpathSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
   validateCaptureBundleBytes,
-  type ValidatedCaptureBundle
+  type ValidatedCaptureBundle,
 } from "./capture-bundle.js";
 import {
   deriveDisplayInventory,
@@ -20,10 +15,16 @@ import {
   isCaptureSelector,
   resolveCaptureSelector,
   type CaptureSelector,
-  type DisplayInventory
+  type DisplayInventory,
 } from "./display.js";
 import { isRunId } from "./identifiers.js";
 import type { CaptureSidecar } from "./observation-record.js";
+import {
+  DEFAULT_OBSERVATION_TTL_MS,
+  expirationFor,
+  isObservationTtlMs,
+  type ObservationTtlMs,
+} from "./observation-expiry.js";
 import type { PixelRectangle } from "./region.js";
 import { readStableBinaryFileWithWitness } from "./regular-file.js";
 import { parseStrictJsonBytes, type StrictJsonObject } from "./strict-json.js";
@@ -39,7 +40,7 @@ const displayResultKeys = [
   "kind",
   "requestId",
   "virtualScreen",
-  "monitors"
+  "monitors",
 ] as const;
 const resultKeys = [
   "kind",
@@ -50,7 +51,7 @@ const resultKeys = [
   "monitors",
   "desktop",
   "foreground",
-  "image"
+  "image",
 ] as const;
 const rectKeys = ["x", "y", "width", "height"] as const;
 const monitorKeys = ["x", "y", "width", "height", "primary"] as const;
@@ -59,7 +60,7 @@ const desktopKeys = [
   "connected",
   "kind",
   "sessionId",
-  "desktopName"
+  "desktopName",
 ] as const;
 const foregroundKeys = ["windowHandle", "processId"] as const;
 const imageKeys = ["sha256", "byteLength", "width", "height"] as const;
@@ -90,7 +91,10 @@ export type WindowsCaptureHelperExecution = Readonly<{
 export type WindowsDisplayDependencies = Readonly<{
   createRequestId?: () => string;
   createTempRoot?: () => string;
-  executeHelper?: (requestText: string, tempRoot: string) => WindowsCaptureHelperExecution;
+  executeHelper?: (
+    requestText: string,
+    tempRoot: string,
+  ) => WindowsCaptureHelperExecution;
   removeTempRoot?: (path: string) => void;
 }>;
 
@@ -98,7 +102,10 @@ export type WindowsCaptureDependencies = Readonly<{
   createObservationId?: () => string;
   createRequestId?: () => string;
   createTempRoot?: () => string;
-  executeHelper?: (requestText: string, tempRoot: string) => WindowsCaptureHelperExecution;
+  executeHelper?: (
+    requestText: string,
+    tempRoot: string,
+  ) => WindowsCaptureHelperExecution;
   now?: () => Date;
   removeTempRoot?: (path: string) => void;
 }>;
@@ -107,7 +114,7 @@ export type RegionalCapture = Readonly<{
   bundle: ValidatedCaptureBundle;
   observationId: string;
   capturedAt: string;
-  expiresAt: string;
+  expiresAt: string | null;
   captureMetadataSha256: string;
   environmentFingerprint: string;
   topologyFingerprint: string;
@@ -145,9 +152,15 @@ function fail(): never {
   throw new WindowsCaptureError();
 }
 
-function hasExactKeys(value: StrictJsonObject, keys: readonly string[]): boolean {
+function hasExactKeys(
+  value: StrictJsonObject,
+  keys: readonly string[],
+): boolean {
   const actual = Object.keys(value);
-  return actual.length === keys.length && keys.every((key) => Object.hasOwn(value, key));
+  return (
+    actual.length === keys.length &&
+    keys.every((key) => Object.hasOwn(value, key))
+  );
 }
 
 function requireObject(value: unknown): StrictJsonObject {
@@ -157,7 +170,11 @@ function requireObject(value: unknown): StrictJsonObject {
   return value as StrictJsonObject;
 }
 
-function isInteger(value: unknown, minimum: number, maximum: number): value is number {
+function isInteger(
+  value: unknown,
+  minimum: number,
+  maximum: number,
+): value is number {
   return (
     typeof value === "number" &&
     Number.isSafeInteger(value) &&
@@ -177,10 +194,18 @@ function parseRect(value: unknown): PixelRectangle {
   ) {
     return fail();
   }
-  return Object.freeze({ x: object.x, y: object.y, width: object.width, height: object.height });
+  return Object.freeze({
+    x: object.x,
+    y: object.y,
+    width: object.width,
+    height: object.height,
+  });
 }
 
-function parseDisplayHelperResult(stdout: Buffer, expectedRequestId: string): DisplayResult {
+function parseDisplayHelperResult(
+  stdout: Buffer,
+  expectedRequestId: string,
+): DisplayResult {
   try {
     if (!Buffer.isBuffer(stdout) || stdout.length > MAX_HELPER_OUTPUT_BYTES) {
       return displayFail();
@@ -188,8 +213,8 @@ function parseDisplayHelperResult(stdout: Buffer, expectedRequestId: string): Di
     const root = requireObject(
       parseStrictJsonBytes(stdout, {
         maxBytes: MAX_HELPER_OUTPUT_BYTES,
-        maxDepth: 16
-      })
+        maxDepth: 16,
+      }),
     );
     if (
       !hasExactKeys(root, displayResultKeys) ||
@@ -199,7 +224,11 @@ function parseDisplayHelperResult(stdout: Buffer, expectedRequestId: string): Di
       return displayFail();
     }
     const virtualScreen = parseRect(root.virtualScreen);
-    if (!Array.isArray(root.monitors) || root.monitors.length < 1 || root.monitors.length > 32) {
+    if (
+      !Array.isArray(root.monitors) ||
+      root.monitors.length < 1 ||
+      root.monitors.length > 32
+    ) {
       return displayFail();
     }
     const monitors = root.monitors.map((monitorValue) => {
@@ -219,7 +248,7 @@ function parseDisplayHelperResult(stdout: Buffer, expectedRequestId: string): Di
         y: monitor.y,
         width: monitor.width,
         height: monitor.height,
-        primary: monitor.primary
+        primary: monitor.primary,
       });
     });
     if (monitors.filter((monitor) => monitor.primary).length !== 1) {
@@ -228,14 +257,18 @@ function parseDisplayHelperResult(stdout: Buffer, expectedRequestId: string): Di
     return {
       requestId: expectedRequestId,
       virtualScreen,
-      monitors
+      monitors,
     };
   } catch {
     return displayFail();
   }
 }
 
-function parseHelperResult(stdout: Buffer, expectedRequestId: string, destinationPath: string): CaptureResult {
+function parseHelperResult(
+  stdout: Buffer,
+  expectedRequestId: string,
+  destinationPath: string,
+): CaptureResult {
   try {
     if (!Buffer.isBuffer(stdout) || stdout.length > MAX_HELPER_OUTPUT_BYTES) {
       return fail();
@@ -243,8 +276,8 @@ function parseHelperResult(stdout: Buffer, expectedRequestId: string, destinatio
     const root = requireObject(
       parseStrictJsonBytes(stdout, {
         maxBytes: MAX_HELPER_OUTPUT_BYTES,
-        maxDepth: 16
-      })
+        maxDepth: 16,
+      }),
     );
     if (
       !hasExactKeys(root, resultKeys) ||
@@ -256,7 +289,11 @@ function parseHelperResult(stdout: Buffer, expectedRequestId: string, destinatio
     }
     const sourceRectPx = parseRect(root.sourceRectPx);
     const virtualScreen = parseRect(root.virtualScreen);
-    if (!Array.isArray(root.monitors) || root.monitors.length < 1 || root.monitors.length > 32) {
+    if (
+      !Array.isArray(root.monitors) ||
+      root.monitors.length < 1 ||
+      root.monitors.length > 32
+    ) {
       return fail();
     }
     const monitors = root.monitors.map((monitorValue) => {
@@ -276,7 +313,7 @@ function parseHelperResult(stdout: Buffer, expectedRequestId: string, destinatio
         y: monitor.y,
         width: monitor.width,
         height: monitor.height,
-        primary: monitor.primary
+        primary: monitor.primary,
       });
     });
     if (monitors.filter((monitor) => monitor.primary).length !== 1) {
@@ -326,18 +363,18 @@ function parseHelperResult(stdout: Buffer, expectedRequestId: string, destinatio
         connected: true,
         kind: "default",
         sessionId: desktop.sessionId,
-        desktopName: desktop.desktopName
+        desktopName: desktop.desktopName,
       },
       foreground: {
         windowHandle: foreground.windowHandle,
-        processId: foreground.processId
+        processId: foreground.processId,
       },
       image: {
         sha256: image.sha256,
         byteLength: image.byteLength,
         width: image.width,
-        height: image.height
-      }
+        height: image.height,
+      },
     };
   } catch {
     return fail();
@@ -345,7 +382,9 @@ function parseHelperResult(stdout: Buffer, expectedRequestId: string, destinatio
 }
 
 function hashJson(value: unknown): string {
-  return createHash("sha256").update(JSON.stringify(value), "utf8").digest("hex");
+  return createHash("sha256")
+    .update(JSON.stringify(value), "utf8")
+    .digest("hex");
 }
 
 function defaultObservationId(): string {
@@ -370,18 +409,32 @@ function resolvePowerShellExecutable(): string {
   return resolved;
 }
 
-function defaultExecuteHelper(requestText: string, tempRoot: string): WindowsCaptureHelperExecution {
-  const helperPath = fileURLToPath(new URL("../helper/windows-capture.ps1", import.meta.url));
+function defaultExecuteHelper(
+  requestText: string,
+  tempRoot: string,
+): WindowsCaptureHelperExecution {
+  const helperPath = fileURLToPath(
+    new URL("../helper/windows-capture.ps1", import.meta.url),
+  );
   const powershellPath = resolvePowerShellExecutable();
   const systemRoot = resolve(dirname(powershellPath), "../../..");
   const childEnvironment = Object.fromEntries(
     Object.entries(process.env).filter(
-      ([key]) => key.toLowerCase() !== "systemroot" && key.toLowerCase() !== "windir"
-    )
+      ([key]) =>
+        key.toLowerCase() !== "systemroot" && key.toLowerCase() !== "windir",
+    ),
   );
   const result = spawnSync(
     powershellPath,
-    ["-NoLogo", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-File", helperPath],
+    [
+      "-NoLogo",
+      "-NoProfile",
+      "-NonInteractive",
+      "-ExecutionPolicy",
+      "Bypass",
+      "-File",
+      helperPath,
+    ],
     {
       input: requestText,
       windowsHide: true,
@@ -393,26 +446,28 @@ function defaultExecuteHelper(requestText: string, tempRoot: string): WindowsCap
         SYSTEMROOT: systemRoot,
         WINDIR: systemRoot,
         TEMP: tempRoot,
-        TMP: tempRoot
-      }
-    }
+        TMP: tempRoot,
+      },
+    },
   );
   return {
     status: result.status,
     signal: result.signal,
     stdout: result.stdout ?? Buffer.alloc(0),
-    stderr: result.stderr ?? Buffer.alloc(0)
+    stderr: result.stderr ?? Buffer.alloc(0),
   };
 }
 
 export function queryWindowsDisplays(
-  dependencies: WindowsDisplayDependencies = {}
+  dependencies: WindowsDisplayDependencies = {},
 ): DisplayInventory {
   const createRequestId = dependencies.createRequestId ?? defaultRequestId;
-  const createTempRoot = dependencies.createTempRoot ??
+  const createTempRoot =
+    dependencies.createTempRoot ??
     (() => mkdtempSync(join(tmpdir(), "cu-display-")));
   const executeHelper = dependencies.executeHelper ?? defaultExecuteHelper;
-  const removeTempRoot = dependencies.removeTempRoot ??
+  const removeTempRoot =
+    dependencies.removeTempRoot ??
     ((path: string) => rmSync(path, { recursive: true, force: true }));
 
   let tempRoot: string | undefined;
@@ -427,7 +482,7 @@ export function queryWindowsDisplays(
     const canonicalRoot = realpathSync.native(tempRoot);
     const requestText = `${JSON.stringify({
       kind: "cu.windows-display.request/v1",
-      requestId
+      requestId,
     })}\n`;
     const execution = executeHelper(requestText, canonicalRoot);
     if (
@@ -442,7 +497,7 @@ export function queryWindowsDisplays(
     const helper = parseDisplayHelperResult(execution.stdout, requestId);
     result = deriveDisplayInventory({
       virtualScreen: helper.virtualScreen,
-      monitors: helper.monitors
+      monitors: helper.monitors,
     });
   } catch {
     failed = true;
@@ -466,15 +521,21 @@ export async function captureRegionalObservation(
     selector: CaptureSelector;
     runId: string;
     workspaceFingerprint: string;
+    ttlMs?: ObservationTtlMs;
   }>,
-  dependencies: WindowsCaptureDependencies = {}
+  dependencies: WindowsCaptureDependencies = {},
 ): Promise<RegionalCapture> {
-  const createObservationId = dependencies.createObservationId ?? defaultObservationId;
+  const createObservationId =
+    dependencies.createObservationId ?? defaultObservationId;
   const createRequestId = dependencies.createRequestId ?? defaultRequestId;
-  const createTempRoot = dependencies.createTempRoot ?? (() => mkdtempSync(join(tmpdir(), "cu-capture-")));
+  const createTempRoot =
+    dependencies.createTempRoot ??
+    (() => mkdtempSync(join(tmpdir(), "cu-capture-")));
   const executeHelper = dependencies.executeHelper ?? defaultExecuteHelper;
   const now = dependencies.now ?? (() => new Date());
-  const removeTempRoot = dependencies.removeTempRoot ?? ((path: string) => rmSync(path, { recursive: true, force: true }));
+  const removeTempRoot =
+    dependencies.removeTempRoot ??
+    ((path: string) => rmSync(path, { recursive: true, force: true }));
 
   let tempRoot: string | undefined;
   let result: RegionalCapture | undefined;
@@ -484,7 +545,12 @@ export async function captureRegionalObservation(
     const requestId = createRequestId();
     const capturedAtDate = now();
     const capturedAt = capturedAtDate.toISOString();
-    const expiresAt = new Date(capturedAtDate.getTime() + 60_000).toISOString();
+    const ttlMs =
+      request.ttlMs === undefined ? DEFAULT_OBSERVATION_TTL_MS : request.ttlMs;
+    if (!isObservationTtlMs(ttlMs)) {
+      return fail();
+    }
+    const expiresAt = expirationFor(capturedAtDate, ttlMs);
     if (
       !OBSERVATION_ID_PATTERN.test(observationId) ||
       !REQUEST_ID_PATTERN.test(requestId) ||
@@ -505,7 +571,7 @@ export async function captureRegionalObservation(
       kind: "cu.windows-capture.request/v1",
       requestId,
       destinationPath,
-      selector: request.selector
+      selector: request.selector,
     })}\n`;
     const execution = executeHelper(requestText, canonicalRoot);
     if (
@@ -517,11 +583,15 @@ export async function captureRegionalObservation(
     ) {
       return fail();
     }
-    const helper = parseHelperResult(execution.stdout, requestId, destinationPath);
+    const helper = parseHelperResult(
+      execution.stdout,
+      requestId,
+      destinationPath,
+    );
     const source = helper.sourceRectPx;
     const topology = {
       virtualScreen: helper.virtualScreen,
-      monitors: helper.monitors
+      monitors: helper.monitors,
     };
     const expectedSource = resolveCaptureSelector(request.selector, topology);
     if (
@@ -532,7 +602,9 @@ export async function captureRegionalObservation(
     ) {
       return fail();
     }
-    const imageBytes = readStableBinaryFileWithWitness(destinationPath, [canonicalRoot]).bytes;
+    const imageBytes = readStableBinaryFileWithWitness(destinationPath, [
+      canonicalRoot,
+    ]).bytes;
     const imageSha256 = createHash("sha256").update(imageBytes).digest("hex");
     if (
       imageBytes.length !== helper.image.byteLength ||
@@ -545,7 +617,7 @@ export async function captureRegionalObservation(
     const environmentFingerprint = hashJson({
       topologyFingerprint,
       desktop: helper.desktop,
-      foreground: helper.foreground
+      foreground: helper.foreground,
     });
     const sidecar: CaptureSidecar = {
       kind: "cu.capture/v1",
@@ -557,12 +629,13 @@ export async function captureRegionalObservation(
       expiresAt,
       coordinateSpace: "normalized_999_top_left",
       source: {
-        captureKind: "region",
+        captureKind:
+          request.selector.kind === "full_screen" ? "full" : "region",
         mapping: "normalized_endpoint_centers/v1",
         leftPx: source.x,
         topPx: source.y,
         widthPx: source.width,
-        heightPx: source.height
+        heightPx: source.height,
       },
       environmentFingerprint,
       topologyFingerprint,
@@ -571,14 +644,21 @@ export async function captureRegionalObservation(
         sha256: imageSha256,
         byteLength: imageBytes.length,
         width: helper.image.width,
-        height: helper.image.height
-      }
+        height: helper.image.height,
+      },
     };
-    const captureMetadataBytes = Buffer.from(`${JSON.stringify(sidecar)}\n`, "utf8");
-    const bundle = await validateCaptureBundleBytes(captureMetadataBytes, imageBytes, {
-      runId: request.runId,
-      workspaceFingerprint: request.workspaceFingerprint
-    });
+    const captureMetadataBytes = Buffer.from(
+      `${JSON.stringify(sidecar)}\n`,
+      "utf8",
+    );
+    const bundle = await validateCaptureBundleBytes(
+      captureMetadataBytes,
+      imageBytes,
+      {
+        runId: request.runId,
+        workspaceFingerprint: request.workspaceFingerprint,
+      },
+    );
     result = Object.freeze({
       bundle,
       observationId,
@@ -587,7 +667,7 @@ export async function captureRegionalObservation(
       captureMetadataSha256: bundle.captureMetadataSha256,
       environmentFingerprint,
       topologyFingerprint,
-      sourceRectPx: source
+      sourceRectPx: source,
     });
   } catch {
     failed = true;

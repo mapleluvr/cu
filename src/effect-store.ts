@@ -5,7 +5,7 @@ import { join, resolve } from "node:path";
 import {
   inspectArchiveTransaction,
   inspectArchiveTransactionWithWitness,
-  type WitnessedArchiveTransaction
+  type WitnessedArchiveTransaction,
 } from "./archive-store.js";
 import { validateCaptureBundleBytes } from "./capture-bundle.js";
 import {
@@ -16,18 +16,18 @@ import {
   replaceWitnessedControlRecord,
   stageValidatedControlRecord,
   type ControlRecordIdentity,
-  type StagedControlRecord
+  type StagedControlRecord,
 } from "./control-write.js";
 import {
   assertEffectSegmentPlanObservation,
   effectJournalPlanFor,
-  type EffectSegmentPlan
+  type EffectSegmentPlan,
 } from "./effect-plan.js";
 import {
   parseEffectJournalBytes,
   validateEffectJournalLiveBinding,
   type EffectJournal,
-  type EffectJournalReason
+  type EffectJournalReason,
 } from "./effect-journal.js";
 import { parseHistoryEventBytes } from "./history-event.js";
 import {
@@ -36,7 +36,7 @@ import {
   validateBundleBoundLiveObservation,
   type BundleBoundLiveObservation,
   type CaptureSidecar,
-  type LiveObservation
+  type LiveObservation,
 } from "./observation-record.js";
 import {
   assertStableRegularFileWitnessContinuity,
@@ -50,9 +50,10 @@ import {
   type RegularFileStat,
   type StableAncestorBaseline,
   type StableBinaryFileWitness,
-  type StableRegularFileWitness
+  type StableRegularFileWitness,
 } from "./regular-file.js";
 import { inspectRun } from "./run.js";
+import { ttlMsBetween } from "./observation-expiry.js";
 import { revalidateRunLock, type RunLock } from "./run-lock.js";
 
 export class EffectAuthorityError extends Error {
@@ -72,7 +73,9 @@ export class EffectJournalUnresolvedError extends EffectAuthorityError {}
 const actAuthorityBrand = Symbol("act authority");
 const effectIntentBrand = Symbol("effect intent");
 const unresolvedEffectBrand = Symbol("unresolved effect");
-const effectArchiveResolutionProofBrand = Symbol("effect archive resolution proof");
+const effectArchiveResolutionProofBrand = Symbol(
+  "effect archive resolution proof",
+);
 const observationIdPattern = /^obs_[a-f0-9]{32}$/;
 const effectIdPattern = /^eff_[a-f0-9]{32}$/;
 const digestPattern = /^[a-f0-9]{64}$/;
@@ -101,10 +104,12 @@ export type EffectResolutionDescriptor = Readonly<{
 
 export type ActInputSource = Readonly<{
   mapping: "normalized_endpoint_centers/v1";
+  captureKind: "full" | "region";
   leftPx: number;
   topPx: number;
   widthPx: number;
   heightPx: number;
+  observationTtlMs: number | null;
 }>;
 
 export type InspectActAuthorityOptions = Readonly<{
@@ -240,8 +245,15 @@ function sha256(bytes: Uint8Array): string {
   return createHash("sha256").update(bytes).digest("hex");
 }
 
-function sameIdentity(left: ControlRecordIdentity, right: ControlRecordIdentity): boolean {
-  return left.dev === right.dev && left.ino === right.ino && left.birthtimeNs === right.birthtimeNs;
+function sameIdentity(
+  left: ControlRecordIdentity,
+  right: ControlRecordIdentity,
+): boolean {
+  return (
+    left.dev === right.dev &&
+    left.ino === right.ino &&
+    left.birthtimeNs === right.birthtimeNs
+  );
 }
 
 function identityAt(path: string): ControlRecordIdentity {
@@ -252,7 +264,7 @@ function identityAt(path: string): ControlRecordIdentity {
   return Object.freeze({
     dev: stat.dev,
     ino: stat.ino,
-    birthtimeNs: stat.birthtimeNs
+    birthtimeNs: stat.birthtimeNs,
   });
 }
 
@@ -267,7 +279,7 @@ function regularDirectorySnapshotAt(path: string): RegularFileStat {
     size: stat.size,
     isFile: stat.isFile(),
     isDirectory: stat.isDirectory(),
-    isSymbolicLink: stat.isSymbolicLink()
+    isSymbolicLink: stat.isSymbolicLink(),
   });
   if (!snapshot.isDirectory || snapshot.isFile || snapshot.isSymbolicLink) {
     throw new EffectAuthorityInvalidError();
@@ -286,7 +298,7 @@ function regularFileSnapshotAt(path: string): RegularFileStat {
     size: stat.size,
     isFile: stat.isFile(),
     isDirectory: stat.isDirectory(),
-    isSymbolicLink: stat.isSymbolicLink()
+    isSymbolicLink: stat.isSymbolicLink(),
   });
   if (!snapshot.isFile || snapshot.isDirectory || snapshot.isSymbolicLink) {
     throw new EffectAuthorityInvalidError();
@@ -294,14 +306,19 @@ function regularFileSnapshotAt(path: string): RegularFileStat {
   return snapshot;
 }
 
-function sameRegularFileSnapshot(left: RegularFileStat, right: RegularFileStat): boolean {
-  return sameIdentity(left, right) &&
+function sameRegularFileSnapshot(
+  left: RegularFileStat,
+  right: RegularFileStat,
+): boolean {
+  return (
+    sameIdentity(left, right) &&
     left.ctimeNs === right.ctimeNs &&
     left.mtimeNs === right.mtimeNs &&
     left.size === right.size &&
     left.isFile === right.isFile &&
     left.isDirectory === right.isDirectory &&
-    left.isSymbolicLink === right.isSymbolicLink;
+    left.isSymbolicLink === right.isSymbolicLink
+  );
 }
 
 function isCanonicalTimestamp(value: unknown): value is string {
@@ -351,7 +368,10 @@ function inspectPaths(workspaceRoot: string, runId: string): RunPaths {
     const runDirectory = join(stateDirectory, runId);
     const ancestors = Object.freeze([stateDirectory, runDirectory]);
     const runRecordPath = join(runDirectory, "run.json");
-    const runIdentityBaseline = captureStableAncestorBaseline(runRecordPath, ancestors);
+    const runIdentityBaseline = captureStableAncestorBaseline(
+      runRecordPath,
+      ancestors,
+    );
     const run = inspectRun(root, runId);
     if (run === undefined) {
       throw new EffectAuthorityUnavailableError();
@@ -359,7 +379,7 @@ function inspectPaths(workspaceRoot: string, runId: string): RunPaths {
     revalidateStableAncestorIdentitiesAgainstBaseline(
       runRecordPath,
       ancestors,
-      runIdentityBaseline
+      runIdentityBaseline,
     );
     return Object.freeze({
       root,
@@ -370,10 +390,10 @@ function inspectPaths(workspaceRoot: string, runId: string): RunPaths {
       runIdentityBaseline,
       binding: Object.freeze({
         runId: run.runId,
-        workspaceFingerprint: run.workspaceFingerprint
+        workspaceFingerprint: run.workspaceFingerprint,
       }),
       livePath: join(runDirectory, "live-observation.json"),
-      journalPath: join(runDirectory, "effect-journal.json")
+      journalPath: join(runDirectory, "effect-journal.json"),
     });
   } catch (error) {
     if (error instanceof EffectAuthorityError) {
@@ -388,7 +408,7 @@ function revalidateRunDirectoryIdentity(paths: RunPaths): void {
     revalidateStableAncestorIdentitiesAgainstBaseline(
       paths.runRecordPath,
       paths.ancestors,
-      paths.runIdentityBaseline
+      paths.runIdentityBaseline,
     );
   } catch {
     throw new EffectAuthorityInvalidError();
@@ -406,7 +426,9 @@ function requireHeldLock(lock: RunLock, paths: RunPaths, runId: string): void {
 function requireNoArchiveTransaction(paths: RunPaths): void {
   try {
     revalidateRunDirectoryIdentity(paths);
-    if (inspectArchiveTransaction(paths.root, paths.binding.runId) !== undefined) {
+    if (
+      inspectArchiveTransaction(paths.root, paths.binding.runId) !== undefined
+    ) {
       throw new EffectAuthorityInvalidError();
     }
     revalidateRunDirectoryIdentity(paths);
@@ -421,7 +443,9 @@ function requireNoArchiveTransaction(paths: RunPaths): void {
 function readLiveRecord(paths: RunPaths): LiveRecordState {
   try {
     revalidateRunDirectoryIdentity(paths);
-    const runDirectoryBeforeAbsence = regularDirectorySnapshotAt(paths.runDirectory);
+    const runDirectoryBeforeAbsence = regularDirectorySnapshotAt(
+      paths.runDirectory,
+    );
     try {
       lstatSync(paths.livePath);
     } catch (error) {
@@ -444,8 +468,15 @@ function readLiveRecord(paths: RunPaths): LiveRecordState {
         if (!stillMissing) {
           throw new EffectAuthorityUncertainError();
         }
-        const runDirectoryAfterAbsence = regularDirectorySnapshotAt(paths.runDirectory);
-        if (!sameRegularFileSnapshot(runDirectoryBeforeAbsence, runDirectoryAfterAbsence)) {
+        const runDirectoryAfterAbsence = regularDirectorySnapshotAt(
+          paths.runDirectory,
+        );
+        if (
+          !sameRegularFileSnapshot(
+            runDirectoryBeforeAbsence,
+            runDirectoryAfterAbsence,
+          )
+        ) {
           throw new EffectAuthorityUncertainError();
         }
         revalidateRunDirectoryIdentity(paths);
@@ -453,7 +484,10 @@ function readLiveRecord(paths: RunPaths): LiveRecordState {
       }
       throw error;
     }
-    const admitted = readStableRegularFileWithWitness(paths.livePath, paths.ancestors);
+    const admitted = readStableRegularFileWithWitness(
+      paths.livePath,
+      paths.ancestors,
+    );
     const live = parseLiveObservationBytes(admitted.bytes, paths.binding);
     const base: LiveRecordState = {
       livePath: paths.livePath,
@@ -461,19 +495,31 @@ function readLiveRecord(paths: RunPaths): LiveRecordState {
       liveSha256: sha256(admitted.bytes),
       live,
       liveWitness: admitted.witness,
-      liveIdentity: identityAt(paths.livePath)
+      liveIdentity: identityAt(paths.livePath),
     };
     if (live.kind !== "cu.live-observation/v1") {
       revalidateRunDirectoryIdentity(paths);
       return base;
     }
     const capturesDirectory = join(paths.runDirectory, "captures");
-    const captureAncestors = Object.freeze([...paths.ancestors, capturesDirectory]);
+    const captureAncestors = Object.freeze([
+      ...paths.ancestors,
+      capturesDirectory,
+    ]);
     const capturePath = join(capturesDirectory, `${live.observationId}.json`);
     const imagePath = join(capturesDirectory, `${live.observationId}.png`);
-    const captureAdmitted = readStableRegularFileWithWitness(capturePath, captureAncestors);
-    const imageAdmitted = readStableBinaryFileWithWitness(imagePath, captureAncestors);
-    const capture = parseCaptureSidecarBytes(captureAdmitted.bytes, paths.binding);
+    const captureAdmitted = readStableRegularFileWithWitness(
+      capturePath,
+      captureAncestors,
+    );
+    const imageAdmitted = readStableBinaryFileWithWitness(
+      imagePath,
+      captureAncestors,
+    );
+    const capture = parseCaptureSidecarBytes(
+      captureAdmitted.bytes,
+      paths.binding,
+    );
     const captureSha256 = sha256(captureAdmitted.bytes);
     validateBundleBoundLiveObservation(live, capture, captureSha256);
     if (
@@ -494,7 +540,7 @@ function readLiveRecord(paths: RunPaths): LiveRecordState {
       imageBytes: Buffer.from(imageAdmitted.bytes),
       imagePath,
       imageWitness: imageAdmitted.witness,
-      imageIdentity: identityAt(imagePath)
+      imageIdentity: identityAt(imagePath),
     };
   } catch (error) {
     if (error instanceof EffectAuthorityError) {
@@ -506,7 +552,7 @@ function readLiveRecord(paths: RunPaths): LiveRecordState {
 
 async function readRetainedEffectCapture(
   paths: RunPaths,
-  observationId: string
+  observationId: string,
 ): Promise<RetainedEffectCaptureState> {
   try {
     if (!observationIdPattern.test(observationId)) {
@@ -524,7 +570,7 @@ async function readRetainedEffectCapture(
     const validated = await validateCaptureBundleBytes(
       capture.bytes,
       image.bytes,
-      paths.binding
+      paths.binding,
     );
     if (validated.capture.observationId !== observationId) {
       throw new Error();
@@ -548,7 +594,7 @@ async function readRetainedEffectCapture(
       imageBytes: Buffer.from(image.bytes),
       imagePath,
       imageIdentity,
-      imageSnapshot
+      imageSnapshot,
     });
   } catch {
     throw new EffectAuthorityInvalidError();
@@ -557,20 +603,29 @@ async function readRetainedEffectCapture(
 
 function revalidateRetainedEffectCapture(
   paths: RunPaths,
-  expected: RetainedEffectCaptureState
+  expected: RetainedEffectCaptureState,
 ): void {
   try {
     const capturesDirectory = join(paths.runDirectory, "captures");
     const ancestors = Object.freeze([...paths.ancestors, capturesDirectory]);
-    const capture = readStableRegularFileWithWitness(expected.capturePath, ancestors);
-    const image = readStableBinaryFileWithWitness(expected.imagePath, ancestors);
+    const capture = readStableRegularFileWithWitness(
+      expected.capturePath,
+      ancestors,
+    );
+    const image = readStableBinaryFileWithWitness(
+      expected.imagePath,
+      ancestors,
+    );
     if (
       !capture.bytes.equals(expected.captureBytes) ||
-      !sameIdentity(expected.captureIdentity, identityAt(expected.capturePath)) ||
+      !sameIdentity(
+        expected.captureIdentity,
+        identityAt(expected.capturePath),
+      ) ||
       !image.bytes.equals(expected.imageBytes) ||
       !sameRegularFileSnapshot(
         expected.imageSnapshot,
-        regularFileSnapshotAt(expected.imagePath)
+        regularFileSnapshotAt(expected.imagePath),
       )
     ) {
       throw new Error();
@@ -579,7 +634,7 @@ function revalidateRetainedEffectCapture(
       expected.capturePath,
       ancestors,
       expected.captureWitness,
-      capture.witness
+      capture.witness,
     );
     revalidateRunDirectoryIdentity(paths);
   } catch {
@@ -590,7 +645,7 @@ function revalidateRetainedEffectCapture(
 function readPredecessorHistory(
   paths: RunPaths,
   observationId: string,
-  capturedAt: string
+  capturedAt: string,
 ): PredecessorHistoryState {
   try {
     const path = join(paths.runDirectory, "history.ndjson");
@@ -598,12 +653,14 @@ function readPredecessorHistory(
     if (admitted.bytes.length > 4 * 1024 * 1024) {
       throw new Error();
     }
-    let latestCaptureState: Readonly<{
-      line: Buffer;
-      transactionId: string;
-      eventType: "capture_retained" | "capture_evicted" | "capture_cleared";
-      capturedAt: string;
-    }> | undefined;
+    let latestCaptureState:
+      | Readonly<{
+          line: Buffer;
+          transactionId: string;
+          eventType: "capture_retained" | "capture_evicted" | "capture_cleared";
+          capturedAt: string;
+        }>
+      | undefined;
     let offset = 0;
     let lines = 0;
     while (offset < admitted.bytes.length) {
@@ -615,12 +672,15 @@ function readPredecessorHistory(
       const line = Buffer.from(admitted.bytes.subarray(offset, newline));
       if (line.length > 8_192) throw new Error();
       const event = parseHistoryEventBytes(line, paths.binding);
-      if (event.eventType !== "effect_recovered" && event.observationId === observationId) {
+      if (
+        event.eventType !== "effect_recovered" &&
+        event.observationId === observationId
+      ) {
         latestCaptureState = Object.freeze({
           line,
           transactionId: event.transactionId,
           eventType: event.eventType,
-          capturedAt: event.capturedAt
+          capturedAt: event.capturedAt,
         });
       }
       lines += 1;
@@ -641,7 +701,7 @@ function readPredecessorHistory(
       trailing: Buffer.from(admitted.bytes.subarray(offset)),
       identity: identityAt(path),
       retainedEventLine: latestCaptureState.line,
-      retainedTransactionId: latestCaptureState.transactionId
+      retainedTransactionId: latestCaptureState.transactionId,
     });
   } catch {
     throw new EffectAuthorityInvalidError();
@@ -652,7 +712,7 @@ function revalidatePredecessorHistory(
   paths: RunPaths,
   expected: PredecessorHistoryState,
   observationId: string,
-  capturedAt: string
+  capturedAt: string,
 ): void {
   const current = readPredecessorHistory(paths, observationId, capturedAt);
   const unchangedIncomplete =
@@ -664,9 +724,9 @@ function revalidatePredecessorHistory(
   if (
     !sameIdentity(expected.identity, current.identity) ||
     current.completePrefix.length < expected.completePrefix.length ||
-    !current.completePrefix.subarray(0, expected.completePrefix.length).equals(
-      expected.completePrefix
-    ) ||
+    !current.completePrefix
+      .subarray(0, expected.completePrefix.length)
+      .equals(expected.completePrefix) ||
     (!unchangedIncomplete && !completedExtension) ||
     current.retainedTransactionId !== expected.retainedTransactionId ||
     !current.retainedEventLine.equals(expected.retainedEventLine)
@@ -680,7 +740,7 @@ function requirePriorLiveBinding(
   predecessor: RetainedEffectCaptureState,
   predecessorHistory: PredecessorHistoryState,
   journal: JournalRecordState,
-  priorLiveSha256: string
+  priorLiveSha256: string,
 ): void {
   const capture = predecessor.capture;
   const actionable: BundleBoundLiveObservation = {
@@ -699,11 +759,11 @@ function requirePriorLiveBinding(
     topologyFingerprint: capture.topologyFingerprint,
     image: { ...capture.image },
     state: "actionable",
-    stateChangedAt: capture.capturedAt
+    stateChangedAt: capture.capturedAt,
   };
   const normalizedActionable = parseLiveObservationBytes(
     serializeRecord(actionable),
-    paths.binding
+    paths.binding,
   );
   if (normalizedActionable.kind !== "cu.live-observation/v1") {
     throw new EffectAuthorityUncertainError();
@@ -712,10 +772,11 @@ function requirePriorLiveBinding(
     ...normalizedActionable,
     state: "consumed",
     stateChangedAt: journal.journal.createdAt,
-    consumedByEffectId: journal.journal.effectId
+    consumedByEffectId: journal.journal.effectId,
   };
   if (
-    sha256(serializeRecord(actionable)) !== journal.journal.observation.liveRecordSha256 ||
+    sha256(serializeRecord(actionable)) !==
+      journal.journal.observation.liveRecordSha256 ||
     sha256(serializeRecord(consumed)) !== priorLiveSha256
   ) {
     throw new EffectAuthorityUncertainError();
@@ -724,7 +785,7 @@ function requirePriorLiveBinding(
 
 function requireActionableLive(
   state: LiveRecordState,
-  observationId: string
+  observationId: string,
 ): asserts state is ActAuthorityState["live"] {
   if (
     state.live.kind !== "cu.live-observation/v1" ||
@@ -748,7 +809,11 @@ function revalidateLiveRecord(state: LiveRecordState): void {
     const runDirectory = join(state.livePath, "..");
     const stateDirectory = join(runDirectory, "..");
     const ancestors = Object.freeze([stateDirectory, runDirectory]);
-    revalidateStableRegularFileWitness(state.livePath, ancestors, state.liveWitness);
+    revalidateStableRegularFileWitness(
+      state.livePath,
+      ancestors,
+      state.liveWitness,
+    );
     if (
       state.capturePath !== undefined &&
       state.captureWitness !== undefined &&
@@ -757,8 +822,16 @@ function revalidateLiveRecord(state: LiveRecordState): void {
     ) {
       const capturesDirectory = join(runDirectory, "captures");
       const captureAncestors = Object.freeze([...ancestors, capturesDirectory]);
-      revalidateStableRegularFileWitness(state.capturePath, captureAncestors, state.captureWitness);
-      revalidateStableBinaryFileWitness(state.imagePath, captureAncestors, state.imageWitness);
+      revalidateStableRegularFileWitness(
+        state.capturePath,
+        captureAncestors,
+        state.captureWitness,
+      );
+      revalidateStableBinaryFileWitness(
+        state.imagePath,
+        captureAncestors,
+        state.imageWitness,
+      );
     }
   } catch {
     throw new EffectAuthorityUncertainError();
@@ -768,11 +841,14 @@ function revalidateLiveRecord(state: LiveRecordState): void {
 function readJournal(paths: RunPaths): JournalRecordState | undefined {
   try {
     revalidateRunDirectoryIdentity(paths);
-    const baseline = captureStableAncestorBaseline(paths.journalPath, paths.ancestors);
+    const baseline = captureStableAncestorBaseline(
+      paths.journalPath,
+      paths.ancestors,
+    );
     const admitted = readStableOptionalRegularFileWithWitnessAgainstBaseline(
       paths.journalPath,
       paths.ancestors,
-      baseline
+      baseline,
     );
     if (admitted === undefined) {
       revalidateRunDirectoryIdentity(paths);
@@ -784,14 +860,17 @@ function readJournal(paths: RunPaths): JournalRecordState | undefined {
       bytes: Buffer.from(admitted.bytes),
       journal,
       witness: admitted.witness,
-      identity: identityAt(paths.journalPath)
+      identity: identityAt(paths.journalPath),
     });
   } catch {
     throw new EffectJournalInvalidError();
   }
 }
 
-function validateJournalAgainstLive(journal: JournalRecordState, live: LiveRecordState): void {
+function validateJournalAgainstLive(
+  journal: JournalRecordState,
+  live: LiveRecordState,
+): void {
   try {
     if (live.live.kind !== "cu.live-observation/v1") {
       throw new Error();
@@ -799,10 +878,15 @@ function validateJournalAgainstLive(journal: JournalRecordState, live: LiveRecor
     // The journal is published before the live record becomes consumed. A consumed
     // record therefore proves the same evidence and effect binding while retaining
     // the journal's pre-consume live-record digest.
-    const liveRecordSha256 = live.live.state === "actionable"
-      ? live.liveSha256
-      : journal.journal.observation.liveRecordSha256;
-    validateEffectJournalLiveBinding(journal.journal, live.live, liveRecordSha256);
+    const liveRecordSha256 =
+      live.live.state === "actionable"
+        ? live.liveSha256
+        : journal.journal.observation.liveRecordSha256;
+    validateEffectJournalLiveBinding(
+      journal.journal,
+      live.live,
+      liveRecordSha256,
+    );
   } catch {
     throw new EffectJournalInvalidError();
   }
@@ -810,7 +894,11 @@ function validateJournalAgainstLive(journal: JournalRecordState, live: LiveRecor
 
 function revalidateJournal(paths: RunPaths, journal: JournalRecordState): void {
   try {
-    revalidateStableRegularFileWitness(paths.journalPath, paths.ancestors, journal.witness);
+    revalidateStableRegularFileWitness(
+      paths.journalPath,
+      paths.ancestors,
+      journal.witness,
+    );
     if (!sameIdentity(journal.identity, identityAt(paths.journalPath))) {
       throw new Error();
     }
@@ -831,7 +919,10 @@ function discardStage(stage: StagedControlRecord): void {
   }
 }
 
-function requireSameImmutableBundle(expected: LiveRecordState, actual: LiveRecordState): void {
+function requireSameImmutableBundle(
+  expected: LiveRecordState,
+  actual: LiveRecordState,
+): void {
   if (
     expected.live.kind !== "cu.live-observation/v1" ||
     actual.live.kind !== "cu.live-observation/v1" ||
@@ -860,7 +951,10 @@ function requireSameImmutableBundle(expected: LiveRecordState, actual: LiveRecor
   }
 }
 
-function requireSameLiveAuthority(expected: LiveRecordState, actual: LiveRecordState): void {
+function requireSameLiveAuthority(
+  expected: LiveRecordState,
+  actual: LiveRecordState,
+): void {
   if (
     !expected.liveBytes.equals(actual.liveBytes) ||
     !sameIdentity(expected.liveIdentity, actual.liveIdentity) ||
@@ -880,7 +974,7 @@ function replaceLiveRecord(
   paths: RunPaths,
   expected: LiveRecordState,
   replacement: LiveObservation,
-  beforeCutover?: () => void
+  beforeCutover?: () => void,
 ): LiveRecordState {
   const candidateBytes = serializeRecord(replacement);
   try {
@@ -903,7 +997,7 @@ function replaceLiveRecord(
       candidateBytes,
       (bytes) => {
         parseLiveObservationBytes(bytes, paths.binding);
-      }
+      },
     );
   } catch {
     throw new EffectAuthorityInvalidError();
@@ -932,7 +1026,7 @@ function replaceLiveRecord(
       paths.runDirectory,
       paths.ancestors,
       predecessor.liveWitness,
-      staged
+      staged,
     );
   } catch (error) {
     if (error instanceof ControlRecordReplacementUncertainError) {
@@ -963,30 +1057,36 @@ function invalidateLive(
   paths: RunPaths,
   live: LiveRecordState,
   invalidatedReason: "expired" | "environment_changed",
-  at: string
+  at: string,
 ): void {
   if (live.live.kind !== "cu.live-observation/v1") {
     throw new EffectAuthorityUnavailableError();
   }
   try {
-    replaceLiveRecord(lock, paths, live, {
-      kind: "cu.live-observation-tombstone/v1",
-      schemaVersion: 1,
-      runId: live.live.runId,
-      workspaceFingerprint: live.live.workspaceFingerprint,
-      observationId: live.live.observationId,
-      previousLiveRecordSha256: live.liveSha256,
-      invalidatedReason,
-      invalidatedAt: at,
-      invalidatedByTransactionId: null
-    }, () => {
-      if (readJournal(paths) !== undefined) {
-        throw new EffectJournalUnresolvedError();
-      }
-      requireNoArchiveTransaction(paths);
-      requireHeldLock(lock, paths, paths.binding.runId);
-      revalidateRunDirectoryIdentity(paths);
-    });
+    replaceLiveRecord(
+      lock,
+      paths,
+      live,
+      {
+        kind: "cu.live-observation-tombstone/v1",
+        schemaVersion: 1,
+        runId: live.live.runId,
+        workspaceFingerprint: live.live.workspaceFingerprint,
+        observationId: live.live.observationId,
+        previousLiveRecordSha256: live.liveSha256,
+        invalidatedReason,
+        invalidatedAt: at,
+        invalidatedByTransactionId: null,
+      },
+      () => {
+        if (readJournal(paths) !== undefined) {
+          throw new EffectJournalUnresolvedError();
+        }
+        requireNoArchiveTransaction(paths);
+        requireHeldLock(lock, paths, paths.binding.runId);
+        revalidateRunDirectoryIdentity(paths);
+      },
+    );
   } catch {
     throw new EffectAuthorityUncertainError();
   }
@@ -996,7 +1096,7 @@ export async function inspectActAuthority(
   lock: RunLock,
   workspaceRoot: string,
   runId: string,
-  options: InspectActAuthorityOptions
+  options: InspectActAuthorityOptions,
 ): Promise<ActAuthority> {
   requireValidOptions(options);
   const paths = inspectPaths(workspaceRoot, runId);
@@ -1014,7 +1114,11 @@ export async function inspectActAuthority(
   requireActionableLive(live, options.observationId);
 
   try {
-    await validateCaptureBundleBytes(live.captureBytes!, live.imageBytes, paths.binding);
+    await validateCaptureBundleBytes(
+      live.captureBytes!,
+      live.imageBytes,
+      paths.binding,
+    );
   } catch {
     throw new EffectAuthorityInvalidError();
   }
@@ -1022,7 +1126,10 @@ export async function inspectActAuthority(
   requireHeldLock(lock, paths, runId);
 
   const now = currentTime(options);
-  if (now.getTime() >= new Date(live.live.expiresAt).getTime()) {
+  if (
+    live.live.expiresAt !== null &&
+    now.getTime() >= new Date(live.live.expiresAt).getTime()
+  ) {
     invalidateLive(lock, paths, live, "expired", now.toISOString());
     throw new EffectAuthorityExpiredError();
   }
@@ -1043,11 +1150,13 @@ export async function inspectActAuthority(
   revalidateRunDirectoryIdentity(paths);
   revalidateLiveRecord(live);
 
-  const authority = Object.freeze({ [actAuthorityBrand]: true }) as ActAuthority;
+  const authority = Object.freeze({
+    [actAuthorityBrand]: true,
+  }) as ActAuthority;
   actAuthorities.set(authority, {
     paths,
     lock,
-    live
+    live,
   });
   return authority;
 }
@@ -1056,10 +1165,14 @@ function requireAuthority(
   authority: ActAuthority,
   lock: RunLock,
   workspaceRoot: string,
-  runId: string
+  runId: string,
 ): ActAuthorityState {
   const state = actAuthorities.get(authority);
-  if (state === undefined || state.paths.binding.runId !== runId || state.lock !== lock) {
+  if (
+    state === undefined ||
+    state.paths.binding.runId !== runId ||
+    state.lock !== lock
+  ) {
     throw new EffectAuthorityInvalidError();
   }
   const requestedRoot = realpathSync.native(resolve(workspaceRoot));
@@ -1081,9 +1194,12 @@ function requireAuthority(
 function intentJournalRecord(
   paths: RunPaths,
   live: ActAuthorityState["live"],
-  options: BeginEffectIntentOptions
+  options: BeginEffectIntentOptions,
 ): EffectJournal {
-  if (!effectIdPattern.test(options.effectId) || !isCanonicalTimestamp(options.startedAt)) {
+  if (
+    !effectIdPattern.test(options.effectId) ||
+    !isCanonicalTimestamp(options.startedAt)
+  ) {
     throw new EffectAuthorityInvalidError();
   }
   assertEffectSegmentPlanObservation(options.plan, live.live.observationId);
@@ -1103,9 +1219,9 @@ function intentJournalRecord(
       captureMetadataSha256: live.captureSha256,
       imageSha256: live.live.image.sha256,
       environmentFingerprint: live.live.environmentFingerprint,
-      topologyFingerprint: live.live.topologyFingerprint
+      topologyFingerprint: live.live.topologyFingerprint,
     },
-    plan
+    plan,
   };
   parseEffectJournalBytes(serializeRecord(record), paths.binding);
   return record;
@@ -1114,7 +1230,7 @@ function intentJournalRecord(
 function publishIntentJournal(
   lock: RunLock,
   state: ActAuthorityState,
-  record: EffectJournal
+  record: EffectJournal,
 ): JournalRecordState {
   const candidateBytes = serializeRecord(record);
   let staged: StagedControlRecord;
@@ -1126,7 +1242,7 @@ function publishIntentJournal(
       candidateBytes,
       (bytes) => {
         parseEffectJournalBytes(bytes, state.paths.binding);
-      }
+      },
     );
   } catch {
     throw new EffectAuthorityInvalidError();
@@ -1156,7 +1272,7 @@ function publishIntentJournal(
       state.paths.journalPath,
       state.paths.runDirectory,
       state.paths.ancestors,
-      staged
+      staged,
     );
   } catch (error) {
     if (error instanceof ControlRecordPublicationUncertainError) {
@@ -1168,12 +1284,15 @@ function publishIntentJournal(
     throw new EffectAuthorityUncertainError();
   }
   try {
-    const journal = parseEffectJournalBytes(candidateBytes, state.paths.binding);
+    const journal = parseEffectJournalBytes(
+      candidateBytes,
+      state.paths.binding,
+    );
     return Object.freeze({
       bytes: candidateBytes,
       journal,
       witness: published.witness,
-      identity: published.identity
+      identity: published.identity,
     });
   } catch {
     throw new EffectAuthorityUncertainError();
@@ -1184,7 +1303,7 @@ function consumeLiveForIntent(
   lock: RunLock,
   state: ActAuthorityState,
   journal: JournalRecordState,
-  consumedAt: string
+  consumedAt: string,
 ): LiveRecordState {
   let current: LiveRecordState;
   try {
@@ -1199,7 +1318,10 @@ function consumeLiveForIntent(
     }
     current = readLiveRecord(state.paths);
     requireSameLiveAuthority(state.live, current);
-    if (current.live.kind !== "cu.live-observation/v1" || current.live.state !== "actionable") {
+    if (
+      current.live.kind !== "cu.live-observation/v1" ||
+      current.live.state !== "actionable"
+    ) {
       throw new EffectAuthorityUnavailableError();
     }
     validateJournalAgainstLive(durableJournal, current);
@@ -1217,24 +1339,30 @@ function consumeLiveForIntent(
     ...current.live,
     state: "consumed",
     stateChangedAt: consumedAt,
-    consumedByEffectId: journal.journal.effectId
+    consumedByEffectId: journal.journal.effectId,
   };
   try {
-    const installed = replaceLiveRecord(lock, state.paths, current, consumed, () => {
-      const durableJournal = readJournal(state.paths);
-      if (
-        durableJournal === undefined ||
-        !durableJournal.bytes.equals(journal.bytes) ||
-        !sameIdentity(durableJournal.identity, journal.identity) ||
-        durableJournal.journal.state !== "intent"
-      ) {
-        throw new EffectAuthorityUncertainError();
-      }
-      revalidateJournal(state.paths, durableJournal);
-      requireNoArchiveTransaction(state.paths);
-      requireHeldLock(lock, state.paths, state.paths.binding.runId);
-      revalidateRunDirectoryIdentity(state.paths);
-    });
+    const installed = replaceLiveRecord(
+      lock,
+      state.paths,
+      current,
+      consumed,
+      () => {
+        const durableJournal = readJournal(state.paths);
+        if (
+          durableJournal === undefined ||
+          !durableJournal.bytes.equals(journal.bytes) ||
+          !sameIdentity(durableJournal.identity, journal.identity) ||
+          durableJournal.journal.state !== "intent"
+        ) {
+          throw new EffectAuthorityUncertainError();
+        }
+        revalidateJournal(state.paths, durableJournal);
+        requireNoArchiveTransaction(state.paths);
+        requireHeldLock(lock, state.paths, state.paths.binding.runId);
+        revalidateRunDirectoryIdentity(state.paths);
+      },
+    );
     requireSameImmutableBundle(current, installed);
     revalidateLiveRecord(installed);
     return installed;
@@ -1250,9 +1378,12 @@ function proveJointIntentState(
   lock: RunLock,
   state: ActAuthorityState,
   journal: JournalRecordState,
-  consumed: LiveRecordState
+  consumed: LiveRecordState,
 ): Readonly<{ journal: JournalRecordState; live: LiveRecordState }> {
-  const admitExact = (): Readonly<{ journal: JournalRecordState; live: LiveRecordState }> => {
+  const admitExact = (): Readonly<{
+    journal: JournalRecordState;
+    live: LiveRecordState;
+  }> => {
     const currentJournal = readJournal(state.paths);
     if (
       currentJournal === undefined ||
@@ -1296,17 +1427,24 @@ function proveJointIntentState(
   }
 }
 
-export function actAuthorityInputSource(authority: ActAuthority): ActInputSource {
+export function actAuthorityInputSource(
+  authority: ActAuthority,
+): ActInputSource {
   const state = actAuthorities.get(authority);
   if (state === undefined) {
     throw new EffectAuthorityInvalidError();
   }
   return Object.freeze({
     mapping: state.live.capture.source.mapping,
+    captureKind: state.live.capture.source.captureKind,
     leftPx: state.live.capture.source.leftPx,
     topPx: state.live.capture.source.topPx,
     widthPx: state.live.capture.source.widthPx,
-    heightPx: state.live.capture.source.heightPx
+    heightPx: state.live.capture.source.heightPx,
+    observationTtlMs: ttlMsBetween(
+      state.live.capture.capturedAt,
+      state.live.capture.expiresAt,
+    ),
   });
 }
 
@@ -1315,7 +1453,7 @@ export function beginEffectIntent(
   workspaceRoot: string,
   runId: string,
   authority: ActAuthority,
-  options: BeginEffectIntentOptions
+  options: BeginEffectIntentOptions,
 ): EffectIntent {
   let state: ActAuthorityState;
   let record: EffectJournal;
@@ -1335,15 +1473,31 @@ export function beginEffectIntent(
     if (options.startedAt !== now.toISOString()) {
       throw new EffectAuthorityInvalidError();
     }
-    if (now.getTime() >= new Date(state.live.live.expiresAt).getTime()) {
-      invalidateLive(lock, state.paths, state.live, "expired", now.toISOString());
+    if (
+      state.live.live.expiresAt !== null &&
+      now.getTime() >= new Date(state.live.live.expiresAt).getTime()
+    ) {
+      invalidateLive(
+        lock,
+        state.paths,
+        state.live,
+        "expired",
+        now.toISOString(),
+      );
       throw new EffectAuthorityExpiredError();
     }
     if (
-      options.environmentFingerprint !== state.live.live.environmentFingerprint ||
+      options.environmentFingerprint !==
+        state.live.live.environmentFingerprint ||
       options.topologyFingerprint !== state.live.live.topologyFingerprint
     ) {
-      invalidateLive(lock, state.paths, state.live, "environment_changed", now.toISOString());
+      invalidateLive(
+        lock,
+        state.paths,
+        state.live,
+        "environment_changed",
+        now.toISOString(),
+      );
       throw new EffectAuthorityEnvironmentChangedError();
     }
     revalidateLiveRecord(state.live);
@@ -1373,7 +1527,12 @@ export function beginEffectIntent(
   }
   let final: Readonly<{ journal: JournalRecordState; live: LiveRecordState }>;
   try {
-    const consumed = consumeLiveForIntent(lock, state, journal, options.startedAt);
+    const consumed = consumeLiveForIntent(
+      lock,
+      state,
+      journal,
+      options.startedAt,
+    );
     final = proveJointIntentState(lock, state, journal, consumed);
   } catch (error) {
     if (error instanceof EffectAuthorityError) {
@@ -1391,7 +1550,7 @@ export function beginEffectIntent(
     sha256: sha256(final.journal.bytes),
     identity: final.journal.identity,
     state: "intent",
-    live: final.live
+    live: final.live,
   });
   return intent;
 }
@@ -1400,10 +1559,14 @@ function requireIntent(
   intent: EffectIntent,
   lock: RunLock,
   workspaceRoot: string,
-  runId: string
+  runId: string,
 ): EffectIntentState {
   const state = effectIntents.get(intent);
-  if (state === undefined || state.paths.binding.runId !== runId || state.lock !== lock) {
+  if (
+    state === undefined ||
+    state.paths.binding.runId !== runId ||
+    state.lock !== lock
+  ) {
     throw new EffectAuthorityInvalidError();
   }
   let requestedRoot: string;
@@ -1422,7 +1585,7 @@ function requireIntent(
 
 function requireExactIntentJournal(
   paths: RunPaths,
-  state: EffectIntentState
+  state: EffectIntentState,
 ): JournalRecordState {
   const current = readJournal(paths);
   if (
@@ -1439,7 +1602,7 @@ function requireExactIntentJournal(
 
 function requireExactConsumedLive(
   state: EffectIntentState,
-  journal: JournalRecordState
+  journal: JournalRecordState,
 ): LiveRecordState {
   try {
     const current = readLiveRecord(state.paths);
@@ -1465,7 +1628,7 @@ export function finalizeCompletedEffectIntent(
   lock: RunLock,
   workspaceRoot: string,
   runId: string,
-  intent: EffectIntent
+  intent: EffectIntent,
 ): void {
   const state = requireIntent(intent, lock, workspaceRoot, runId);
   if (state.state !== "intent") {
@@ -1500,7 +1663,7 @@ export function transitionEffectIntent(
   workspaceRoot: string,
   runId: string,
   intent: EffectIntent,
-  transition: EffectIntentTransition
+  transition: EffectIntentTransition,
 ): void {
   const state = requireIntent(intent, lock, workspaceRoot, runId);
   if (
@@ -1517,7 +1680,7 @@ export function transitionEffectIntent(
     "input_unproven",
     "cleanup_unproven",
     "checkpoint_capture_failed",
-    "checkpoint_publish_failed"
+    "checkpoint_publish_failed",
   ]);
   if (!allowedReasons.has(transition.reason)) {
     throw new EffectAuthorityInvalidError();
@@ -1534,7 +1697,7 @@ export function transitionEffectIntent(
     ...prior.journal,
     state: transition.state,
     stateChangedAt: transition.stateChangedAt,
-    reason: transition.reason
+    reason: transition.reason,
   };
   const candidateBytes = serializeRecord(candidateJournal);
   try {
@@ -1552,7 +1715,7 @@ export function transitionEffectIntent(
       candidateBytes,
       (bytes) => {
         parseEffectJournalBytes(bytes, state.paths.binding);
-      }
+      },
     );
   } catch {
     throw new EffectAuthorityInvalidError();
@@ -1582,7 +1745,7 @@ export function transitionEffectIntent(
       state.paths.runDirectory,
       state.paths.ancestors,
       predecessor.witness,
-      staged
+      staged,
     );
   } catch (error) {
     if (error instanceof ControlRecordReplacementUncertainError) {
@@ -1631,7 +1794,7 @@ function readLiveBoundToJournal(paths: RunPaths): LiveRecordState {
 export function inspectUnresolvedEffect(
   lock: RunLock,
   workspaceRoot: string,
-  runId: string
+  runId: string,
 ): UnresolvedEffect | undefined {
   const paths = inspectPaths(workspaceRoot, runId);
   requireHeldLock(lock, paths, runId);
@@ -1668,7 +1831,9 @@ export function inspectUnresolvedEffect(
   requireNoArchiveTransaction(paths);
   requireHeldLock(lock, paths, runId);
   revalidateRunDirectoryIdentity(paths);
-  const unresolved = Object.freeze({ [unresolvedEffectBrand]: true }) as UnresolvedEffect;
+  const unresolved = Object.freeze({
+    [unresolvedEffectBrand]: true,
+  }) as UnresolvedEffect;
   unresolvedEffects.set(unresolved, {
     paths,
     lock,
@@ -1677,7 +1842,7 @@ export function inspectUnresolvedEffect(
     sha256: sha256(finalJournal.bytes),
     identity: finalJournal.identity,
     state: finalJournal.journal.state,
-    live: finalLive
+    live: finalLive,
   });
   return unresolved;
 }
@@ -1686,10 +1851,16 @@ export function revalidateEffectResolutionDescriptor(
   effect: EffectIntent | UnresolvedEffect,
   lock: RunLock,
   workspaceRoot: string,
-  runId: string
+  runId: string,
 ): EffectResolutionDescriptor {
-  const state = effectIntents.get(effect as EffectIntent) ?? unresolvedEffects.get(effect as UnresolvedEffect);
-  if (state === undefined || state.lock !== lock || state.paths.binding.runId !== runId) {
+  const state =
+    effectIntents.get(effect as EffectIntent) ??
+    unresolvedEffects.get(effect as UnresolvedEffect);
+  if (
+    state === undefined ||
+    state.lock !== lock ||
+    state.paths.binding.runId !== runId
+  ) {
     throw new EffectAuthorityInvalidError();
   }
   let root: string;
@@ -1710,7 +1881,10 @@ export function revalidateEffectResolutionDescriptor(
     revalidateJournal(state.paths, journal);
     requireHeldLock(lock, state.paths, runId);
     revalidateRunDirectoryIdentity(state.paths);
-    return Object.freeze({ effectId: state.effectId, journalSha256: state.sha256 });
+    return Object.freeze({
+      effectId: state.effectId,
+      journalSha256: state.sha256,
+    });
   } catch (error) {
     if (error instanceof EffectAuthorityError) throw error;
     throw new EffectAuthorityUncertainError();
@@ -1719,9 +1893,10 @@ export function revalidateEffectResolutionDescriptor(
 
 function retainedCaptureMatchesIntent(
   predecessor: RetainedEffectCaptureState,
-  expected: EffectIntentState
+  expected: EffectIntentState,
 ): boolean {
-  return expected.live.capturePath === predecessor.capturePath &&
+  return (
+    expected.live.capturePath === predecessor.capturePath &&
     expected.live.captureBytes !== undefined &&
     expected.live.captureBytes.equals(predecessor.captureBytes) &&
     expected.live.captureIdentity !== undefined &&
@@ -1730,14 +1905,15 @@ function retainedCaptureMatchesIntent(
     expected.live.imageBytes !== undefined &&
     expected.live.imageBytes.equals(predecessor.imageBytes) &&
     expected.live.imageIdentity !== undefined &&
-    sameIdentity(expected.live.imageIdentity, predecessor.imageIdentity);
+    sameIdentity(expected.live.imageIdentity, predecessor.imageIdentity)
+  );
 }
 
 function requireEffectArchiveResolutionProof(
   proof: EffectArchiveResolutionProof,
   lock: RunLock,
   workspaceRoot: string,
-  runId: string
+  runId: string,
 ): EffectArchiveResolutionProofState {
   const state = effectArchiveResolutionProofs.get(proof);
   let root: string;
@@ -1762,17 +1938,20 @@ export async function proveEffectArchiveResolution(
   workspaceRoot: string,
   runId: string,
   activeTransaction: WitnessedArchiveTransaction,
-  expectedEffect?: EffectIntent | UnresolvedEffect
+  expectedEffect?: EffectIntent | UnresolvedEffect,
 ): Promise<EffectArchiveResolutionProof> {
   const paths = inspectPaths(workspaceRoot, runId);
-  const expectedState = expectedEffect === undefined
-    ? undefined
-    : effectIntents.get(expectedEffect as EffectIntent) ??
-      unresolvedEffects.get(expectedEffect as UnresolvedEffect);
+  const expectedState =
+    expectedEffect === undefined
+      ? undefined
+      : (effectIntents.get(expectedEffect as EffectIntent) ??
+        unresolvedEffects.get(expectedEffect as UnresolvedEffect));
   if (
     expectedEffect !== undefined &&
-    (expectedState === undefined || expectedState.lock !== lock ||
-      expectedState.paths.root !== paths.root || expectedState.paths.binding.runId !== runId)
+    (expectedState === undefined ||
+      expectedState.lock !== lock ||
+      expectedState.paths.root !== paths.root ||
+      expectedState.paths.binding.runId !== runId)
   ) {
     throw new EffectAuthorityInvalidError();
   }
@@ -1785,18 +1964,24 @@ export async function proveEffectArchiveResolution(
       transaction.state === "prepared" ||
       transaction.payload.resolvesEffect === null ||
       transaction.priorLive === null ||
-      transaction.payload.replacesObservationId !== transaction.priorLive.observationId ||
-      transaction.payload.newBundle.observationId === transaction.priorLive.observationId ||
-      activeTransaction.recordPath !== join(paths.runDirectory, "archive-transaction.json")
+      transaction.payload.replacesObservationId !==
+        transaction.priorLive.observationId ||
+      transaction.payload.newBundle.observationId ===
+        transaction.priorLive.observationId ||
+      activeTransaction.recordPath !==
+        join(paths.runDirectory, "archive-transaction.json")
     ) {
       throw new Error();
     }
     revalidateStableRegularFileWitness(
       activeTransaction.recordPath,
       activeTransaction.ancestors,
-      activeTransaction.witness
+      activeTransaction.witness,
     );
-    const admittedActive = inspectArchiveTransactionWithWitness(paths.root, runId);
+    const admittedActive = inspectArchiveTransactionWithWitness(
+      paths.root,
+      runId,
+    );
     if (
       admittedActive === undefined ||
       admittedActive.recordPath !== activeTransaction.recordPath ||
@@ -1808,20 +1993,20 @@ export async function proveEffectArchiveResolution(
       activeTransaction.recordPath,
       activeTransaction.ancestors,
       activeTransaction.witness,
-      admittedActive.witness
+      admittedActive.witness,
     );
     const descriptor = transaction.payload.resolvesEffect;
     const recoveryEvents = transaction.historyEvents.filter(
-      (event) => event.eventType === "effect_recovered"
+      (event) => event.eventType === "effect_recovered",
     );
     if (
       recoveryEvents.length !== 1 ||
       recoveryEvents[0]!.effectId !== descriptor.effectId ||
-      recoveryEvents[0]!.recoveryObservationId !== transaction.payload.newBundle.observationId ||
-      (expectedState !== undefined && (
-        expectedState.effectId !== descriptor.effectId ||
-        expectedState.sha256 !== descriptor.journalSha256
-      ))
+      recoveryEvents[0]!.recoveryObservationId !==
+        transaction.payload.newBundle.observationId ||
+      (expectedState !== undefined &&
+        (expectedState.effectId !== descriptor.effectId ||
+          expectedState.sha256 !== descriptor.journalSha256))
     ) {
       throw new Error();
     }
@@ -1829,29 +2014,32 @@ export async function proveEffectArchiveResolution(
     const journal = readJournal(paths);
     const predecessor = await readRetainedEffectCapture(
       paths,
-      transaction.priorLive.observationId
+      transaction.priorLive.observationId,
     );
     const predecessorHistory = readPredecessorHistory(
       paths,
       transaction.priorLive.observationId,
-      predecessor.capture.capturedAt
+      predecessor.capture.capturedAt,
     );
     if (
-      (expectedState !== undefined && (
-        journal === undefined ||
-        !journal.bytes.equals(expectedState.bytes) ||
-        !sameIdentity(journal.identity, expectedState.identity) ||
-        !retainedCaptureMatchesIntent(predecessor, expectedState)
-      )) ||
-      (journal !== undefined && (
-        journal.journal.effectId !== descriptor.effectId ||
-        journal.journal.observation.observationId !== transaction.priorLive.observationId ||
-        journal.journal.observation.captureMetadataSha256 !== predecessor.captureSha256 ||
-        journal.journal.observation.imageSha256 !== predecessor.capture.image.sha256 ||
-        journal.journal.observation.environmentFingerprint !== predecessor.capture.environmentFingerprint ||
-        journal.journal.observation.topologyFingerprint !== predecessor.capture.topologyFingerprint ||
-        sha256(journal.bytes) !== descriptor.journalSha256
-      ))
+      (expectedState !== undefined &&
+        (journal === undefined ||
+          !journal.bytes.equals(expectedState.bytes) ||
+          !sameIdentity(journal.identity, expectedState.identity) ||
+          !retainedCaptureMatchesIntent(predecessor, expectedState))) ||
+      (journal !== undefined &&
+        (journal.journal.effectId !== descriptor.effectId ||
+          journal.journal.observation.observationId !==
+            transaction.priorLive.observationId ||
+          journal.journal.observation.captureMetadataSha256 !==
+            predecessor.captureSha256 ||
+          journal.journal.observation.imageSha256 !==
+            predecessor.capture.image.sha256 ||
+          journal.journal.observation.environmentFingerprint !==
+            predecessor.capture.environmentFingerprint ||
+          journal.journal.observation.topologyFingerprint !==
+            predecessor.capture.topologyFingerprint ||
+          sha256(journal.bytes) !== descriptor.journalSha256))
     ) {
       throw new Error();
     }
@@ -1861,21 +2049,24 @@ export async function proveEffectArchiveResolution(
         predecessor,
         predecessorHistory,
         journal,
-        transaction.priorLive.liveRecordSha256
+        transaction.priorLive.liveRecordSha256,
       );
     }
 
     const proof = Object.freeze({
-      [effectArchiveResolutionProofBrand]: true
+      [effectArchiveResolutionProofBrand]: true,
     }) as EffectArchiveResolutionProof;
-    effectArchiveResolutionProofs.set(proof, Object.freeze({
-      paths,
-      lock,
-      active: admittedActive,
-      journal,
-      predecessor,
-      predecessorHistory
-    }));
+    effectArchiveResolutionProofs.set(
+      proof,
+      Object.freeze({
+        paths,
+        lock,
+        active: admittedActive,
+        journal,
+        predecessor,
+        predecessorHistory,
+      }),
+    );
     revalidateEffectArchiveResolutionProof(proof, lock, paths.root, runId);
     return proof;
   } catch (error) {
@@ -1885,7 +2076,7 @@ export async function proveEffectArchiveResolution(
 }
 
 export function effectArchiveResolutionJournalPresent(
-  proof: EffectArchiveResolutionProof
+  proof: EffectArchiveResolutionProof,
 ): boolean {
   const state = effectArchiveResolutionProofs.get(proof);
   if (state === undefined) {
@@ -1898,17 +2089,26 @@ export function revalidateEffectArchiveResolutionProof(
   proof: EffectArchiveResolutionProof,
   lock: RunLock,
   workspaceRoot: string,
-  runId: string
+  runId: string,
 ): void {
-  const state = requireEffectArchiveResolutionProof(proof, lock, workspaceRoot, runId);
+  const state = requireEffectArchiveResolutionProof(
+    proof,
+    lock,
+    workspaceRoot,
+    runId,
+  );
   try {
     requireHeldLock(lock, state.paths, runId);
     revalidateRunDirectoryIdentity(state.paths);
-    const active = inspectArchiveTransactionWithWitness(state.paths.root, runId);
+    const active = inspectArchiveTransactionWithWitness(
+      state.paths.root,
+      runId,
+    );
     if (
       active === undefined ||
       active.recordPath !== state.active.recordPath ||
-      JSON.stringify(active.transaction) !== JSON.stringify(state.active.transaction)
+      JSON.stringify(active.transaction) !==
+        JSON.stringify(state.active.transaction)
     ) {
       throw new Error();
     }
@@ -1916,7 +2116,7 @@ export function revalidateEffectArchiveResolutionProof(
       state.active.recordPath,
       state.active.ancestors,
       state.active.witness,
-      active.witness
+      active.witness,
     );
     const journal = readJournal(state.paths);
     if (state.journal === undefined) {
@@ -1933,7 +2133,7 @@ export function revalidateEffectArchiveResolutionProof(
         state.paths.journalPath,
         state.paths.ancestors,
         state.journal.witness,
-        journal.witness
+        journal.witness,
       );
     }
     revalidateRetainedEffectCapture(state.paths, state.predecessor);
@@ -1941,7 +2141,7 @@ export function revalidateEffectArchiveResolutionProof(
       state.paths,
       state.predecessorHistory,
       state.predecessor.capture.observationId,
-      state.predecessor.capture.capturedAt
+      state.predecessor.capture.capturedAt,
     );
     requireHeldLock(lock, state.paths, runId);
     revalidateRunDirectoryIdentity(state.paths);
@@ -1955,9 +2155,14 @@ export function finalizeEffectJournalForArchiveTransaction(
   lock: RunLock,
   workspaceRoot: string,
   runId: string,
-  proof: EffectArchiveResolutionProof
+  proof: EffectArchiveResolutionProof,
 ): void {
-  const state = requireEffectArchiveResolutionProof(proof, lock, workspaceRoot, runId);
+  const state = requireEffectArchiveResolutionProof(
+    proof,
+    lock,
+    workspaceRoot,
+    runId,
+  );
   try {
     revalidateEffectArchiveResolutionProof(proof, lock, workspaceRoot, runId);
     const transaction = state.active.transaction;
@@ -1969,7 +2174,7 @@ export function finalizeEffectJournalForArchiveTransaction(
       throw new Error();
     }
     const recoveryEvents = transaction.historyEvents.filter(
-      (event) => event.eventType === "effect_recovered"
+      (event) => event.eventType === "effect_recovered",
     );
     if (recoveryEvents.length !== 1) {
       throw new Error();
@@ -1980,15 +2185,20 @@ export function finalizeEffectJournalForArchiveTransaction(
       live.live.state !== "actionable" ||
       live.live.observationId !== transaction.payload.newBundle.observationId ||
       live.live.publishedByTransactionId !== transaction.transactionId ||
-      live.live.captureMetadataSha256 !== transaction.payload.newBundle.captureMetadataSha256 ||
+      live.live.captureMetadataSha256 !==
+        transaction.payload.newBundle.captureMetadataSha256 ||
       live.live.image.sha256 !== transaction.payload.newBundle.imageSha256 ||
-      live.live.image.byteLength !== transaction.payload.newBundle.imageByteLength ||
+      live.live.image.byteLength !==
+        transaction.payload.newBundle.imageByteLength ||
       sha256(live.liveBytes) !== transaction.payload.newLiveRecordSha256
     ) {
       throw new Error();
     }
     const historyPath = join(state.paths.runDirectory, "history.ndjson");
-    const history = readStableBinaryFileWithWitness(historyPath, state.paths.ancestors);
+    const history = readStableBinaryFileWithWitness(
+      historyPath,
+      state.paths.ancestors,
+    );
     if (history.bytes.length > 4 * 1024 * 1024) {
       throw new Error();
     }
@@ -2006,45 +2216,60 @@ export function finalizeEffectJournalForArchiveTransaction(
       throw new Error();
     }
     const expectedHistoryLines = transaction.historyEvents.map((event) =>
-      Buffer.from(JSON.stringify({
-        kind: "cu.history.event/v1",
-        schemaVersion: 1,
-        ...event,
-        transactionId: transaction.transactionId,
-        runId: transaction.runId,
-        workspaceFingerprint: transaction.workspaceFingerprint
-      }), "utf8")
+      Buffer.from(
+        JSON.stringify({
+          kind: "cu.history.event/v1",
+          schemaVersion: 1,
+          ...event,
+          transactionId: transaction.transactionId,
+          runId: transaction.runId,
+          workspaceFingerprint: transaction.workspaceFingerprint,
+        }),
+        "utf8",
+      ),
     );
     if (expectedHistoryLines.length > historyLines.length) {
       throw new Error();
     }
     const transactionTail = historyLines.slice(
-      historyLines.length - expectedHistoryLines.length
+      historyLines.length - expectedHistoryLines.length,
     );
-    if (transactionTail.some((line, index) => !line.equals(expectedHistoryLines[index]!))) {
+    if (
+      transactionTail.some(
+        (line, index) => !line.equals(expectedHistoryLines[index]!),
+      )
+    ) {
       throw new Error();
     }
-    const matching = historyLines.map((line) =>
-      parseHistoryEventBytes(line, state.paths.binding)
-    ).filter((event) =>
-      event.transactionId === transaction.transactionId &&
-      event.eventType === "effect_recovered" &&
-      event.eventId === recoveryEvents[0]!.eventId &&
-      event.at === recoveryEvents[0]!.at &&
-      event.effectId === descriptor.effectId &&
-      event.recoveryObservationId === transaction.payload.newBundle.observationId
-    );
+    const matching = historyLines
+      .map((line) => parseHistoryEventBytes(line, state.paths.binding))
+      .filter(
+        (event) =>
+          event.transactionId === transaction.transactionId &&
+          event.eventType === "effect_recovered" &&
+          event.eventId === recoveryEvents[0]!.eventId &&
+          event.at === recoveryEvents[0]!.at &&
+          event.effectId === descriptor.effectId &&
+          event.recoveryObservationId ===
+            transaction.payload.newBundle.observationId,
+      );
     if (matching.length !== 1) {
       throw new Error();
     }
 
     revalidateLiveRecord(live);
-    revalidateStableBinaryFileWitness(historyPath, state.paths.ancestors, history.witness);
+    revalidateStableBinaryFileWitness(
+      historyPath,
+      state.paths.ancestors,
+      history.witness,
+    );
     revalidateEffectArchiveResolutionProof(proof, lock, workspaceRoot, runId);
     if (state.journal === undefined) {
       return;
     }
-    if (!sameIdentity(state.journal.identity, identityAt(state.paths.journalPath))) {
+    if (
+      !sameIdentity(state.journal.identity, identityAt(state.paths.journalPath))
+    ) {
       throw new Error();
     }
     unlinkSync(state.paths.journalPath);
@@ -2059,14 +2284,16 @@ export function finalizeEffectJournalForArchiveTransaction(
 }
 
 export function effectResolutionDescriptor(
-  effect: EffectIntent | UnresolvedEffect
+  effect: EffectIntent | UnresolvedEffect,
 ): EffectResolutionDescriptor {
-  const state = effectIntents.get(effect as EffectIntent) ?? unresolvedEffects.get(effect as UnresolvedEffect);
+  const state =
+    effectIntents.get(effect as EffectIntent) ??
+    unresolvedEffects.get(effect as UnresolvedEffect);
   if (state === undefined) {
     throw new EffectAuthorityInvalidError();
   }
   return Object.freeze({
     effectId: state.effectId,
-    journalSha256: state.sha256
+    journalSha256: state.sha256,
   });
 }

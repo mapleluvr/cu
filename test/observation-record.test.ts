@@ -5,12 +5,17 @@ import {
   ObservationRecordError,
   parseCaptureSidecarBytes,
   parseLiveObservationBytes,
-  validateBundleBoundLiveObservation
+  validateBundleBoundLiveObservation,
 } from "../src/observation-record.js";
+import {
+  expirationFor,
+  isObservationTtlMs,
+  isValidObservationExpiry,
+} from "../src/observation-expiry.js";
 
 const binding = {
   runId: "work-a",
-  workspaceFingerprint: "a".repeat(64)
+  workspaceFingerprint: "a".repeat(64),
 };
 
 function captureSidecar(): Record<string, unknown> {
@@ -29,7 +34,7 @@ function captureSidecar(): Record<string, unknown> {
       leftPx: 0,
       topPx: 0,
       widthPx: 1920,
-      heightPx: 1080
+      heightPx: 1080,
     },
     environmentFingerprint: "b".repeat(64),
     topologyFingerprint: "c".repeat(64),
@@ -38,16 +43,21 @@ function captureSidecar(): Record<string, unknown> {
       sha256: "d".repeat(64),
       byteLength: 12345,
       width: 1920,
-      height: 1080
-    }
+      height: 1080,
+    },
   };
 }
 
 function parse(sidecar = captureSidecar(), expected = binding) {
-  return parseCaptureSidecarBytes(Buffer.from(JSON.stringify(sidecar), "utf8"), expected);
+  return parseCaptureSidecarBytes(
+    Buffer.from(JSON.stringify(sidecar), "utf8"),
+    expected,
+  );
 }
 
-function captureObservationError(operation: () => void): ObservationRecordError {
+function captureObservationError(
+  operation: () => void,
+): ObservationRecordError {
   try {
     operation();
   } catch (error) {
@@ -77,7 +87,7 @@ function actionableLiveRecord(): Record<string, unknown> {
     topologyFingerprint: capture.topologyFingerprint,
     image: capture.image,
     state: "actionable",
-    stateChangedAt: capture.capturedAt
+    stateChangedAt: capture.capturedAt,
   };
 }
 
@@ -86,7 +96,7 @@ function consumedLiveRecord(): Record<string, unknown> {
     ...actionableLiveRecord(),
     state: "consumed",
     stateChangedAt: "2026-07-24T00:00:00.500Z",
-    consumedByEffectId: "eff_0123456789abcdef0123456789abcdef"
+    consumedByEffectId: "eff_0123456789abcdef0123456789abcdef",
   };
 }
 
@@ -100,7 +110,7 @@ function clearedTombstone(): Record<string, unknown> {
     previousLiveRecordSha256: "e".repeat(64),
     invalidatedReason: "cleared",
     invalidatedAt: "2026-07-24T00:01:00.000Z",
-    invalidatedByTransactionId: "txn_0123456789abcdef0123456789abcdef"
+    invalidatedByTransactionId: "txn_0123456789abcdef0123456789abcdef",
   };
 }
 
@@ -108,37 +118,47 @@ const bindingAdmissionVariants = [
   {
     name: "capture sidecar",
     record: captureSidecar,
-    admit: (bytes: Buffer, expected: typeof binding) => parseCaptureSidecarBytes(bytes, expected)
+    admit: (bytes: Buffer, expected: typeof binding) =>
+      parseCaptureSidecarBytes(bytes, expected),
   },
   {
     name: "bundle-bound live observation",
     record: actionableLiveRecord,
-    admit: (bytes: Buffer, expected: typeof binding) => parseLiveObservationBytes(bytes, expected)
+    admit: (bytes: Buffer, expected: typeof binding) =>
+      parseLiveObservationBytes(bytes, expected),
   },
   {
     name: "live-observation tombstone",
     record: clearedTombstone,
-    admit: (bytes: Buffer, expected: typeof binding) => parseLiveObservationBytes(bytes, expected)
-  }
+    admit: (bytes: Buffer, expected: typeof binding) =>
+      parseLiveObservationBytes(bytes, expected),
+  },
 ];
 
 for (const variant of bindingAdmissionVariants) {
   test(`rejects a matching malformed run ID in ${variant.name}`, () => {
     const runId = "WORK-A";
-    const error = captureObservationError(() => variant.admit(
-      Buffer.from(JSON.stringify({ ...variant.record(), runId }), "utf8"),
-      { ...binding, runId }
-    ));
+    const error = captureObservationError(() =>
+      variant.admit(
+        Buffer.from(JSON.stringify({ ...variant.record(), runId }), "utf8"),
+        { ...binding, runId },
+      ),
+    );
 
     assert.equal(error.message, "");
   });
 
   test(`rejects a matching malformed workspace fingerprint in ${variant.name}`, () => {
     const workspaceFingerprint = "A".repeat(64);
-    const error = captureObservationError(() => variant.admit(
-      Buffer.from(JSON.stringify({ ...variant.record(), workspaceFingerprint }), "utf8"),
-      { ...binding, workspaceFingerprint }
-    ));
+    const error = captureObservationError(() =>
+      variant.admit(
+        Buffer.from(
+          JSON.stringify({ ...variant.record(), workspaceFingerprint }),
+          "utf8",
+        ),
+        { ...binding, workspaceFingerprint },
+      ),
+    );
 
     assert.equal(error.message, "");
   });
@@ -149,12 +169,12 @@ test("contains malformed runtime expected bindings as record errors", () => {
   const invalid = [
     null,
     { runId: 1, workspaceFingerprint: binding.workspaceFingerprint },
-    { runId: binding.runId, workspaceFingerprint: null }
+    { runId: binding.runId, workspaceFingerprint: null },
   ];
 
   for (const expected of invalid) {
     const error = captureObservationError(() =>
-      parseCaptureSidecarBytes(bytes, expected as unknown as typeof binding)
+      parseCaptureSidecarBytes(bytes, expected as unknown as typeof binding),
     );
     assert.equal(error.message, "");
   }
@@ -170,21 +190,71 @@ test("admits a complete workspace-bound immutable capture sidecar", () => {
   assert.deepEqual({ ...record.image }, captureSidecar().image);
 });
 
+test("accepts an unlimited capture expiration", () => {
+  const sidecar = captureSidecar();
+  sidecar.expiresAt = null;
+
+  const parsed = parse(sidecar);
+
+  assert.equal(parsed.expiresAt, null);
+});
+
+test("accepts configurable whole-second and unlimited expiration values", () => {
+  const wholeSecond = captureSidecar();
+  wholeSecond.expiresAt = "2026-07-24T00:05:00.000Z";
+  assert.equal(parse(wholeSecond).expiresAt, "2026-07-24T00:05:00.000Z");
+
+  const unlimited = captureSidecar();
+  unlimited.expiresAt = null;
+  assert.equal(parse(unlimited).expiresAt, null);
+
+  for (const expiresAt of [
+    "2026-07-24T00:00:00.000Z",
+    "2026-07-23T23:59:59.000Z",
+    "2026-07-24T00:01:00.001Z",
+    "invalid",
+  ]) {
+    const sidecar = captureSidecar();
+    sidecar.expiresAt = expiresAt;
+    assert.throws(() => parse(sidecar), ObservationRecordError);
+  }
+});
+
+test("bounds observation TTL values and computes expiration deterministically", () => {
+  assert.equal(isObservationTtlMs(null), true);
+  assert.equal(isObservationTtlMs(300_000), true);
+  assert.equal(isObservationTtlMs(999), false);
+  assert.equal(isObservationTtlMs(-1_000), false);
+  assert.equal(isObservationTtlMs(2_147_483_647_000), true);
+  assert.equal(isObservationTtlMs(2_147_483_648_000), false);
+  assert.equal(
+    expirationFor(new Date("2026-07-24T00:00:00.000Z"), 300_000),
+    "2026-07-24T00:05:00.000Z",
+  );
+  assert.equal(expirationFor(new Date("2026-07-24T00:00:00.000Z"), null), null);
+  assert.equal(
+    isValidObservationExpiry("2026-07-24T00:00:00.000Z", null),
+    true,
+  );
+});
 test("admits an actionable bundle-bound live observation", () => {
   const record = parseLiveObservationBytes(
     Buffer.from(JSON.stringify(actionableLiveRecord()), "utf8"),
-    binding
+    binding,
   );
 
   assert.equal(record.kind, "cu.live-observation/v1");
   assert.equal(record.state, "actionable");
-  assert.equal(record.publishedByTransactionId, "txn_0123456789abcdef0123456789abcdef");
+  assert.equal(
+    record.publishedByTransactionId,
+    "txn_0123456789abcdef0123456789abcdef",
+  );
 });
 
 test("admits a consumed bundle-bound live observation", () => {
   const record = parseLiveObservationBytes(
     Buffer.from(JSON.stringify(consumedLiveRecord()), "utf8"),
-    binding
+    binding,
   );
 
   assert.equal(record.kind, "cu.live-observation/v1");
@@ -202,7 +272,7 @@ test("admits a consumed bundle-bound live observation", () => {
 test("admits a no-bundle live-observation tombstone", () => {
   const record = parseLiveObservationBytes(
     Buffer.from(JSON.stringify(clearedTombstone()), "utf8"),
-    binding
+    binding,
   );
 
   assert.equal(record.kind, "cu.live-observation-tombstone/v1");
@@ -210,14 +280,17 @@ test("admits a no-bundle live-observation tombstone", () => {
     assert.fail("expected tombstone");
   }
   assert.equal(record.invalidatedReason, "cleared");
-  assert.equal(record.invalidatedByTransactionId, "txn_0123456789abcdef0123456789abcdef");
+  assert.equal(
+    record.invalidatedByTransactionId,
+    "txn_0123456789abcdef0123456789abcdef",
+  );
 });
 
 test("binds a bundle-bound live record to its immutable sidecar", () => {
   const capture = parse();
   const live = parseLiveObservationBytes(
     Buffer.from(JSON.stringify(actionableLiveRecord()), "utf8"),
-    binding
+    binding,
   );
 
   assert.equal(live.kind, "cu.live-observation/v1");
@@ -225,7 +298,7 @@ test("binds a bundle-bound live record to its immutable sidecar", () => {
     assert.fail("expected bundle-bound live record");
   }
   assert.doesNotThrow(() =>
-    validateBundleBoundLiveObservation(live, capture, "e".repeat(64))
+    validateBundleBoundLiveObservation(live, capture, "e".repeat(64)),
   );
 });
 
@@ -240,34 +313,40 @@ test("rejects bundle-bound live records with sidecar binding mismatches", () => 
       ...valid,
       capturedAt: "2026-07-24T00:00:00.100Z",
       expiresAt: "2026-07-24T00:01:00.100Z",
-      stateChangedAt: "2026-07-24T00:00:00.100Z"
+      stateChangedAt: "2026-07-24T00:00:00.100Z",
     },
     { ...valid, captureMetadataSha256: "f".repeat(64) },
     { ...valid, source: { ...source, leftPx: 1 } },
     { ...valid, environmentFingerprint: "f".repeat(64) },
     { ...valid, topologyFingerprint: "f".repeat(64) },
-    { ...valid, image: { ...image, sha256: "f".repeat(64) } }
+    { ...valid, image: { ...image, sha256: "f".repeat(64) } },
   ];
 
   for (const raw of invalid) {
-    const live = parseLiveObservationBytes(Buffer.from(JSON.stringify(raw), "utf8"), binding);
+    const live = parseLiveObservationBytes(
+      Buffer.from(JSON.stringify(raw), "utf8"),
+      binding,
+    );
     assert.equal(live.kind, "cu.live-observation/v1");
     if (live.kind !== "cu.live-observation/v1") {
       assert.fail("expected bundle-bound live record");
     }
     assert.throws(
       () => validateBundleBoundLiveObservation(live, capture, "e".repeat(64)),
-      ObservationRecordError
+      ObservationRecordError,
     );
   }
-  const live = parseLiveObservationBytes(Buffer.from(JSON.stringify(valid), "utf8"), binding);
+  const live = parseLiveObservationBytes(
+    Buffer.from(JSON.stringify(valid), "utf8"),
+    binding,
+  );
   assert.equal(live.kind, "cu.live-observation/v1");
   if (live.kind !== "cu.live-observation/v1") {
     assert.fail("expected bundle-bound live record");
   }
   assert.throws(
     () => validateBundleBoundLiveObservation(live, capture, "E".repeat(64)),
-    ObservationRecordError
+    ObservationRecordError,
   );
 });
 
@@ -281,23 +360,30 @@ test("rejects malformed or copied tombstones without sidecar lookup", () => {
     { ...valid, invalidatedReason: "superseded" },
     { ...valid, invalidatedAt: "2026-07-24T00:01:00Z" },
     { ...valid, invalidatedByTransactionId: "txn_wrong" },
-    { ...valid, invalidatedByTransactionId: 1 }
+    { ...valid, invalidatedByTransactionId: 1 },
   ];
 
   for (const tombstone of invalid) {
     assert.throws(
-      () => parseLiveObservationBytes(Buffer.from(JSON.stringify(tombstone), "utf8"), binding),
-      ObservationRecordError
+      () =>
+        parseLiveObservationBytes(
+          Buffer.from(JSON.stringify(tombstone), "utf8"),
+          binding,
+        ),
+      ObservationRecordError,
     );
   }
 
   const expired = parseLiveObservationBytes(
-    Buffer.from(JSON.stringify({
-      ...valid,
-      invalidatedReason: "expired",
-      invalidatedByTransactionId: null
-    }), "utf8"),
-    binding
+    Buffer.from(
+      JSON.stringify({
+        ...valid,
+        invalidatedReason: "expired",
+        invalidatedByTransactionId: null,
+      }),
+      "utf8",
+    ),
+    binding,
   );
   assert.equal(expired.kind, "cu.live-observation-tombstone/v1");
 });
@@ -307,13 +393,17 @@ test("requires tombstone reason and transaction linkage to agree", () => {
   const invalid = [
     { ...valid, invalidatedByTransactionId: null },
     { ...valid, invalidatedReason: "expired" },
-    { ...valid, invalidatedReason: "environment_changed" }
+    { ...valid, invalidatedReason: "environment_changed" },
   ];
 
   for (const tombstone of invalid) {
     assert.throws(
-      () => parseLiveObservationBytes(Buffer.from(JSON.stringify(tombstone), "utf8"), binding),
-      ObservationRecordError
+      () =>
+        parseLiveObservationBytes(
+          Buffer.from(JSON.stringify(tombstone), "utf8"),
+          binding,
+        ),
+      ObservationRecordError,
     );
   }
 });
@@ -322,13 +412,17 @@ test("rejects malformed consumed live-record state", () => {
   const valid = consumedLiveRecord();
   const invalid = [
     { ...valid, consumedByEffectId: "eff_wrong" },
-    { ...valid, stateChangedAt: "2026-07-24T00:00:00Z" }
+    { ...valid, stateChangedAt: "2026-07-24T00:00:00Z" },
   ];
 
   for (const live of invalid) {
     assert.throws(
-      () => parseLiveObservationBytes(Buffer.from(JSON.stringify(live), "utf8"), binding),
-      ObservationRecordError
+      () =>
+        parseLiveObservationBytes(
+          Buffer.from(JSON.stringify(live), "utf8"),
+          binding,
+        ),
+      ObservationRecordError,
     );
   }
 });
@@ -344,38 +438,47 @@ test("rejects actionable live-record shape and state violations", () => {
     { ...valid, publishedByTransactionId: "txn_wrong" },
     { ...valid, captureMetadataSha256: "E".repeat(64) },
     { ...valid, source: { ...source, unexpected: true } },
-    { ...valid, image: { ...image, unexpected: true } }
+    { ...valid, image: { ...image, unexpected: true } },
   ];
 
   for (const live of invalid) {
     assert.throws(
-      () => parseLiveObservationBytes(Buffer.from(JSON.stringify(live), "utf8"), binding),
-      ObservationRecordError
+      () =>
+        parseLiveObservationBytes(
+          Buffer.from(JSON.stringify(live), "utf8"),
+          binding,
+        ),
+      ObservationRecordError,
     );
   }
 });
 
 test("rejects a live observation copied from another workspace", () => {
   assert.throws(
-    () => parseLiveObservationBytes(
-      Buffer.from(JSON.stringify(actionableLiveRecord()), "utf8"),
-      { ...binding, workspaceFingerprint: "e".repeat(64) }
-    ),
-    ObservationRecordError
+    () =>
+      parseLiveObservationBytes(
+        Buffer.from(JSON.stringify(actionableLiveRecord()), "utf8"),
+        { ...binding, workspaceFingerprint: "e".repeat(64) },
+      ),
+    ObservationRecordError,
   );
 });
 
 test("rejects a capture sidecar copied from another workspace", () => {
   assert.throws(
-    () => parse(captureSidecar(), { ...binding, workspaceFingerprint: "e".repeat(64) }),
-    ObservationRecordError
+    () =>
+      parse(captureSidecar(), {
+        ...binding,
+        workspaceFingerprint: "e".repeat(64),
+      }),
+    ObservationRecordError,
   );
 });
 
 test("rejects an uncontracted capture-sidecar root field", () => {
   assert.throws(
     () => parse({ ...captureSidecar(), unexpected: true }),
-    ObservationRecordError
+    ObservationRecordError,
   );
 });
 
@@ -383,20 +486,28 @@ test("enforces the strict control-record byte ceiling at the record boundary", (
   const encoded = Buffer.from(JSON.stringify(captureSidecar()), "utf8");
   const exact = Buffer.concat([
     encoded,
-    Buffer.from(" ".repeat(65_536 - encoded.byteLength), "utf8")
+    Buffer.from(" ".repeat(65_536 - encoded.byteLength), "utf8"),
   ]);
 
   assert.equal(exact.byteLength, 65_536);
   assert.doesNotThrow(() => parseCaptureSidecarBytes(exact, binding));
   const error = captureObservationError(() =>
-    parseCaptureSidecarBytes(Buffer.concat([exact, Buffer.from(" ", "utf8")]), binding)
+    parseCaptureSidecarBytes(
+      Buffer.concat([exact, Buffer.from(" ", "utf8")]),
+      binding,
+    ),
   );
   assert.equal(error.message, "");
 });
 
 test("contains malformed capture bytes as a content-free record error", () => {
-  for (const bytes of [Buffer.from('{"private":"secret"', "utf8"), Buffer.from("null", "utf8")]) {
-    const error = captureObservationError(() => parseCaptureSidecarBytes(bytes, binding));
+  for (const bytes of [
+    Buffer.from('{"private":"secret"', "utf8"),
+    Buffer.from("null", "utf8"),
+  ]) {
+    const error = captureObservationError(() =>
+      parseCaptureSidecarBytes(bytes, binding),
+    );
 
     assert.equal(error.message, "");
     assert.doesNotMatch(error.message, /secret/);
@@ -417,7 +528,7 @@ test("rejects capture sidecar shape and discriminator violations", () => {
     { ...valid, source: { ...source, unexpected: true } },
     { ...valid, image: [] },
     { ...valid, image: { ...image, mediaType: "image/jpeg" } },
-    { ...valid, image: { ...image, unexpected: true } }
+    { ...valid, image: { ...image, unexpected: true } },
   ];
 
   for (const sidecar of invalid) {
@@ -442,7 +553,7 @@ test("rejects noncanonical immutable capture metadata", () => {
     { ...valid, image: { ...image, sha256: "D".repeat(64) } },
     { ...valid, image: { ...image, byteLength: 67_108_865 } },
     { ...valid, image: { ...image, width: 0 } },
-    { ...valid, image: { ...image, height: 32_769 } }
+    { ...valid, image: { ...image, height: 32_769 } },
   ];
 
   for (const sidecar of invalid) {

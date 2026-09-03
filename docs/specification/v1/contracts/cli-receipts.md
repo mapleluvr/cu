@@ -13,7 +13,7 @@ The public command set is fixed for v1:
 ```text
 cu init [--json]
 cu displays [--json]
-cu observe <run_id> [--region <normalized-or-pixel-rectangle>] [--display <display_id>] [--json]
+cu observe <run_id> [--region <normalized-or-pixel-rectangle> [--display <display_id>] | --full-screen <display_id[,display_id...]>] [--ttl <seconds|unlimited>] [--json]
 cu act <run_id> --action-file <path|-> [--json]
 cu history <run_id> [list] [--json]
 cu history <run_id> show <observation_id> [--json]
@@ -31,6 +31,16 @@ underscores, and hyphens. Empty IDs, path separators, and `..` are rejected.
 inside the selected display placement and must still satisfy the existing regional
 size and full-virtual-screen refusal rules. The helper and parent independently
 recompute the display binding from the observed topology before publication.
+
+`--full-screen` is mutually exclusive with `--region` and `--display`. It selects
+whole displays explicitly by one or more topology-bound display IDs from
+`cu displays`, comma-separated for multiple screens; it never falls back to an
+implicit current-desktop target, and mixed region/full-screen parameters are
+rejected. The sidecar marks the resulting observation `captureKind: "full"`.
+
+`--ttl` configures the observation lifetime in positive whole seconds, or
+`unlimited` (`expiresAt` is `null`). The default is 300 seconds. A checkpoint
+observation published by `act` inherits the TTL of the observation it replaced.
 
 ## JSON Transport
 
@@ -71,10 +81,13 @@ Every expected failure uses this exact envelope shape:
 ```
 
 Error codes are stable machine identifiers. `message` is useful but must not disclose
-private process, helper, typed-text, or target-identity data. `display_unavailable`
-uses exit `3` when stable, unambiguous display topology cannot be established. A
-stale `--display` binding is reported through the existing content-free capture
-failure path and publishes no observation receipt.
+private process, helper, typed-text, or target-identity data. `retryable` is `true`
+only for codes whose intended recovery is retrying with fresh evidence or a new
+observation — currently `observation_expired` and `observation_consumed` — and `false`
+for every other failure. `display_unavailable` uses exit `3` when stable, unambiguous
+display topology cannot be established. A stale `--display` binding is reported
+through the existing content-free capture failure path and publishes no observation
+receipt.
 
 ## Exit Behavior
 

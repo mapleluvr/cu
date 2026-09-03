@@ -93,7 +93,7 @@ The sidecar has exactly this root shape:
   "workspaceFingerprint": "64-lowercase-hex",
   "observationId": "obs_0123456789abcdef0123456789abcdef",
   "capturedAt": "2026-07-24T00:00:00.000Z",
-  "expiresAt": "2026-07-24T00:01:00.000Z",
+  "expiresAt": "2026-07-24T00:05:00.000Z",
   "coordinateSpace": "normalized_999_top_left",
   "source": {
     "captureKind": "full",
@@ -119,10 +119,13 @@ The root and each nested object use exactly the displayed keys. `captureKind` is
 `full` or `region`; it does not grant unrestricted full-desktop capability. `mapping`
 is always the displayed literal. `leftPx` and `topPx` are safe integers in
 `-1000000..1000000`; `widthPx` and `heightPx` are integers in `1..32768`.
-`capturedAt` is assigned by the CLI after a valid helper response; `expiresAt` is
-exactly 60 seconds later. The source rectangle maps observation-local normalized
-endpoint centers to desktop pixels and is internal record data, never receipt/history
-output.
+`capturedAt` is assigned by the CLI after a valid helper response. `expiresAt` is
+`capturedAt` plus the configured observation TTL: 300 seconds by default,
+configurable per invocation with `observe --ttl` as positive whole seconds or
+`unlimited` (`expiresAt` is `null`, meaning the observation never expires by time).
+Whole seconds are canonical; sub-second offsets are rejected. The source rectangle
+maps observation-local normalized endpoint centers to desktop pixels and is internal
+record data, never receipt/history output.
 
 A sidecar is immutable after create-once publication. Its `metadataSha256` means the
 SHA-256 of its complete stored UTF-8 sidecar bytes; it is held by referencing records,
@@ -365,7 +368,8 @@ The following machine codes are reserved by this contract:
 | `capture_quota_exceeded` | The new capture cannot fit without evicting protected evidence. | blocked (3) |
 | `observation_invalid` | Live/sidecar/image binding is malformed, mismatched, or untrusted. | internal/corrupt (1) |
 | `observation_unavailable` | No current actionable live observation exists. | blocked (3) |
-| `observation_expired` | Current evidence exceeded its 60-second lifetime. | blocked (3) |
+| `observation_expired` | Current evidence exceeded its configured lifetime (default 300 seconds; `unlimited` never expires). Retrying with a fresh observation is the intended recovery. | blocked (3) |
+| `observation_consumed` | The current observation was consumed by a prior effect and cannot authorize another action; capture a new observation before cleanup. | blocked (3) |
 | `observation_environment_changed` | Fresh environment/topology does not match live evidence. | blocked (3) |
 | `archive_recovery_required` | Archive transaction state cannot be proved for rollback or finalization. | blocked (3) |
 | `effect_journal_invalid` | Effect journal is malformed or inconsistent with its live binding. | internal/corrupt (1) |

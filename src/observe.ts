@@ -1,20 +1,18 @@
-import {
-  isCaptureSelector,
-  type CaptureSelector
-} from "./display.js";
+import { isCaptureSelector, type CaptureSelector } from "./display.js";
 import { inspectUnresolvedEffect } from "./effect-store.js";
 import { isRunId } from "./identifiers.js";
+import type { ObservationTtlMs } from "./observation-expiry.js";
 import {
   ObservationArchiveQuotaError,
   publishCaptureObservation,
   recoverObservationArchive,
-  type PublishCaptureObservationOptions
+  type PublishCaptureObservationOptions,
 } from "./observation-archive.js";
 import { acquireRunLock, RunLockBusyError } from "./run-lock.js";
 import { ensureRun } from "./run.js";
 import {
   captureRegionalObservation,
-  type WindowsCaptureDependencies
+  type WindowsCaptureDependencies,
 } from "./windows-capture.js";
 import { workspaceFingerprint } from "./workspace.js";
 
@@ -39,6 +37,7 @@ export class ObserveArchiveError extends Error {
 export class ObserveQuotaError extends ObserveArchiveError {}
 
 export type ObserveRegionDependencies = Readonly<{
+  ttlMs?: ObservationTtlMs;
   captureDependencies?: WindowsCaptureDependencies;
   publishOptions?: PublishCaptureObservationOptions;
 }>;
@@ -50,7 +49,7 @@ export type ObserveResult = Readonly<{
   imagePath: string;
   coordinateSpace: "normalized_999_top_left";
   capturedAt: string;
-  expiresAt: string;
+  expiresAt: string | null;
   actionable: true;
   evictedHistoryCount: number;
 }>;
@@ -59,7 +58,7 @@ export async function observeRegion(
   root: string,
   runId: string,
   selector: CaptureSelector,
-  dependencies: ObserveRegionDependencies = {}
+  dependencies: ObserveRegionDependencies = {},
 ): Promise<ObserveResult> {
   if (!isRunId(runId) || !isCaptureSelector(selector)) {
     throw new ObserveWorkspaceError();
@@ -92,8 +91,13 @@ export async function observeRegion(
     let captured;
     try {
       captured = await captureRegionalObservation(
-        { selector, runId, workspaceFingerprint: fingerprint },
-        dependencies.captureDependencies
+        {
+          selector,
+          runId,
+          workspaceFingerprint: fingerprint,
+          ttlMs: dependencies.ttlMs,
+        },
+        dependencies.captureDependencies,
       );
     } catch {
       throw new ObserveCaptureError();
@@ -106,10 +110,11 @@ export async function observeRegion(
         root,
         runId,
         captured.bundle,
-        { ...dependencies.publishOptions, resolveEffect: unresolvedEffect }
+        { ...dependencies.publishOptions, resolveEffect: unresolvedEffect },
       );
     } catch (error) {
-      if (error instanceof ObservationArchiveQuotaError) throw new ObserveQuotaError();
+      if (error instanceof ObservationArchiveQuotaError)
+        throw new ObserveQuotaError();
       throw new ObserveArchiveError();
     }
 
@@ -122,7 +127,7 @@ export async function observeRegion(
       capturedAt: captured.capturedAt,
       expiresAt: captured.expiresAt,
       actionable: true,
-      evictedHistoryCount: published.evictedHistoryCount
+      evictedHistoryCount: published.evictedHistoryCount,
     });
   } finally {
     try {

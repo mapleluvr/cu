@@ -178,14 +178,32 @@ function Test-RegionSelectorShape {
 function Test-SelectorShape {
   param($Selector)
   if (Test-RegionSelectorShape -Selector $Selector) { return $true }
-  return (
+  if (
     (Test-ExactKeys -Value $Selector -Keys @('kind','displayId','region')) -and
     (Test-ScalarString -Value $Selector.kind) -and
     $Selector.kind -ceq 'display_region' -and
     (Test-ScalarString -Value $Selector.displayId) -and
     $Selector.displayId -cmatch '^dsp_[a-f0-9]{32}$' -and
     (Test-RegionSelectorShape -Selector $Selector.region)
-  )
+  ) {
+    return $true
+  }
+  if (
+    (Test-ExactKeys -Value $Selector -Keys @('kind','displayIds')) -and
+    (Test-ScalarString -Value $Selector.kind) -and
+    $Selector.kind -ceq 'full_screen'
+  ) {
+    $ids = @($Selector.displayIds)
+    if ($ids.Count -lt 1 -or $ids.Count -gt 32) { return $false }
+    $seen = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+    foreach ($id in $ids) {
+      if (-not (Test-ScalarString -Value $id) -or $id -cnotmatch '^dsp_[a-f0-9]{32}$' -or -not $seen.Add([string]$id)) {
+        return $false
+      }
+    }
+    return $true
+  }
+  return $false
 }
 
 function New-RectObject {
@@ -293,6 +311,44 @@ function Resolve-Selector {
     }
     return $rect
   }
+  if ($Selector.kind -ceq 'full_screen') {
+    if (-not (Test-TopologyForPurpose -VirtualScreen $VirtualScreen -Monitors $Monitors -RequireDistinctDisplays $true)) {
+      throw 'display_topology_invalid'
+    }
+    $topologyFingerprint = Get-TopologyFingerprint -VirtualScreen $VirtualScreen -Monitors $Monitors
+    $monitorList = @($Monitors)
+    $selected = New-Object System.Collections.ArrayList
+    $seen = [Collections.Generic.HashSet[string]]::new([StringComparer]::Ordinal)
+    foreach ($displayId in @($Selector.displayIds)) {
+      if (-not $seen.Add([string]$displayId)) { throw 'display_binding_invalid' }
+      $selectedIndex = -1
+      for ($index = 0; $index -lt $monitorList.Count; $index += 1) {
+        if ((Get-DisplayId -TopologyFingerprint $topologyFingerprint -Index $index) -ceq $displayId) {
+          $selectedIndex = $index
+          break
+        }
+      }
+      if ($selectedIndex -lt 0) { throw 'display_binding_invalid' }
+      [void]$selected.Add($monitorList[$selectedIndex])
+    }
+    if ($selected.Count -lt 1) { throw 'display_binding_invalid' }
+    $left = [int64]$selected[0].x
+    $top = [int64]$selected[0].y
+    $right = $left + [int64]$selected[0].width
+    $bottom = $top + [int64]$selected[0].height
+    foreach ($monitor in $selected) {
+      $left = [Math]::Min($left, [int64]$monitor.x)
+      $top = [Math]::Min($top, [int64]$monitor.y)
+      $right = [Math]::Max($right, [int64]$monitor.x + $monitor.width)
+      $bottom = [Math]::Max($bottom, [int64]$monitor.y + $monitor.height)
+    }
+    $width = $right - $left
+    $height = $bottom - $top
+    if ($width -lt 1 -or $height -lt 1 -or $width -gt 32768 -or $height -gt 32768) {
+      throw 'full_screen_size_invalid'
+    }
+    return New-RectObject -X ([int]$left) -Y ([int]$top) -Width ([int]$width) -Height ([int]$height)
+  }
   if ($Selector.kind -ceq 'normalized') {
     if (-not (Test-ExactKeys -Value $Selector -Keys @('kind','left','top','right','bottom'))) { throw 'selector_invalid' }
     foreach ($name in @('left','top','right','bottom')) {
@@ -389,7 +445,7 @@ try {
     }
     $destination = $candidateDestination
 
-    $requireDistinctDisplays = $request.selector.kind -ceq 'display_region'
+    $requireDistinctDisplays = $request.selector.kind -ceq 'display_region' -or $request.selector.kind -ceq 'full_screen'
     $pre = Get-Snapshot -RequireDistinctDisplays $requireDistinctDisplays
     $sourceRect = Resolve-Selector -Selector $request.selector -VirtualScreen $pre.virtualScreen -Monitors $pre.monitors
     $bitmap = New-Object System.Drawing.Bitmap($sourceRect.width, $sourceRect.height, [System.Drawing.Imaging.PixelFormat]::Format24bppRgb)
