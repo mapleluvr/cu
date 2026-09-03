@@ -3,7 +3,7 @@ import { randomBytes } from "node:crypto";
 import {
   isAdmittedActionPlan,
   segmentActionPlan,
-  type NormalizedActionPlan
+  type NormalizedActionPlan,
 } from "./action-file.js";
 import { buildEffectSegmentPlan } from "./effect-plan.js";
 import {
@@ -20,25 +20,30 @@ import {
   EffectAuthorityUncertainError,
   EffectJournalInvalidError,
   EffectJournalUnresolvedError,
-  type EffectIntent
+  type EffectIntent,
 } from "./effect-store.js";
+import {
+  fullScreenSelectorForBounds,
+  type CaptureSelector,
+} from "./display.js";
 import { isRunId } from "./identifiers.js";
+import type { ObservationTtlMs } from "./observation-expiry.js";
 import {
   publishCaptureObservation,
   recoverObservationArchive,
   ObservationArchiveError,
-  type PublishCaptureObservationOptions
+  type PublishCaptureObservationOptions,
 } from "./observation-archive.js";
-import { parseRegionSelector, type RegionSelector } from "./region.js";
+import { parseRegionSelector } from "./region.js";
 import { acquireRunLock, RunLockBusyError } from "./run-lock.js";
 import {
   captureRegionalObservation,
-  type RegionalCapture
+  type RegionalCapture,
 } from "./windows-capture.js";
 import {
   openWindowsInputSession,
   WindowsInputError,
-  type WindowsInputSession
+  type WindowsInputSession,
 } from "./windows-input.js";
 import { workspaceFingerprint } from "./workspace.js";
 
@@ -118,11 +123,14 @@ export type ActRegionDependencies = Readonly<{
   createEffectId?: () => string;
   now?: () => Date;
   openInputSession?: () => Promise<WindowsInputSession>;
-  captureObservation?: (request: Readonly<{
-    selector: RegionSelector;
-    runId: string;
-    workspaceFingerprint: string;
-  }>) => Promise<RegionalCapture>;
+  captureObservation?: (
+    request: Readonly<{
+      selector: CaptureSelector;
+      runId: string;
+      workspaceFingerprint: string;
+      ttlMs?: ObservationTtlMs;
+    }>,
+  ) => Promise<RegionalCapture>;
   publishOptions?: PublishCaptureObservationOptions;
 }>;
 
@@ -141,7 +149,7 @@ export type ActCheckpointResult = Readonly<{
     imagePath: string;
     coordinateSpace: "normalized_999_top_left";
     capturedAt: string;
-    expiresAt: string;
+    expiresAt: string | null;
     actionable: true;
     evictedHistoryCount: number;
   }>;
@@ -161,13 +169,13 @@ function transitionAfterFailure(
     | "cleanup_unproven"
     | "checkpoint_capture_failed"
     | "checkpoint_publish_failed",
-  now: () => Date
+  now: () => Date,
 ): never {
   try {
     transitionEffectIntent(lock, root, runId, intent, {
       state,
       reason,
-      stateChangedAt: now().toISOString()
+      stateChangedAt: now().toISOString(),
     });
   } catch {
     throw new ActIndeterminateError("cleanup_unproven");
@@ -185,7 +193,7 @@ function transitionAfterFailure(
   throw new ActIndeterminateError(
     reason === "helper_lost" || reason === "cleanup_unproven"
       ? reason
-      : "cleanup_unproven"
+      : "cleanup_unproven",
   );
 }
 
@@ -193,7 +201,7 @@ export async function actRegion(
   root: string,
   runId: string,
   plan: NormalizedActionPlan,
-  dependencies: ActRegionDependencies = {}
+  dependencies: ActRegionDependencies = {},
 ): Promise<ActRegionResult> {
   if (!isRunId(runId) || !isAdmittedActionPlan(plan)) {
     throw new ActBlockedError("action_file_invalid");
@@ -201,7 +209,8 @@ export async function actRegion(
   const segment = segmentActionPlan(plan);
   const effectPlan = buildEffectSegmentPlan(plan, segment);
   const now = dependencies.now ?? (() => new Date());
-  const effectId = dependencies.createEffectId?.() ?? `eff_${randomBytes(16).toString("hex")}`;
+  const effectId =
+    dependencies.createEffectId?.() ?? `eff_${randomBytes(16).toString("hex")}`;
 
   let lock: ReturnType<typeof acquireRunLock>;
   try {
@@ -222,7 +231,8 @@ export async function actRegion(
         throw new ActBlockedError("effect_journal_unresolved");
       }
     } catch (error) {
-      if (error instanceof ActBlockedError || error instanceof ActInternalError) throw error;
+      if (error instanceof ActBlockedError || error instanceof ActInternalError)
+        throw error;
       if (error instanceof ObservationArchiveError) {
         throw new ActBlockedError("archive_recovery_required");
       }
@@ -230,7 +240,9 @@ export async function actRegion(
     }
 
     try {
-      session = await (dependencies.openInputSession ?? openWindowsInputSession)();
+      session = await (
+        dependencies.openInputSession ?? openWindowsInputSession
+      )();
     } catch {
       throw new ActBlockedError("input_unavailable");
     }
@@ -241,20 +253,35 @@ export async function actRegion(
         observationId: plan.observationId,
         now,
         environmentFingerprint: session.environmentFingerprint,
-        topologyFingerprint: session.topologyFingerprint
+        topologyFingerprint: session.topologyFingerprint,
       });
     } catch (error) {
       throw mapAuthorityError(error);
     }
     const source = actAuthorityInputSource(authority);
     const actions = Object.freeze(plan.actions.slice(0, segment.prefixLength));
-    let checkpointSelector: RegionSelector | undefined;
+    let checkpointSelector: CaptureSelector | undefined;
     let fingerprint: string | undefined;
     if (segment.outcome === "checkpoint") {
       try {
-        checkpointSelector = parseRegionSelector(
-          `pixel:${source.leftPx},${source.topPx},${source.widthPx},${source.heightPx}`
-        );
+        if (source.captureKind === "full") {
+          if (session.topology === undefined) {
+            throw new Error("full-screen topology unavailable");
+          }
+          checkpointSelector = fullScreenSelectorForBounds(
+            {
+              x: source.leftPx,
+              y: source.topPx,
+              width: source.widthPx,
+              height: source.heightPx,
+            },
+            session.topology,
+          );
+        } else {
+          checkpointSelector = parseRegionSelector(
+            `pixel:${source.leftPx},${source.topPx},${source.widthPx},${source.heightPx}`,
+          );
+        }
         fingerprint = workspaceFingerprint(root);
       } catch {
         throw new ActInternalError("observation_invalid");
@@ -262,7 +289,16 @@ export async function actRegion(
     }
     let prepared;
     try {
-      prepared = session.prepareSegment({ source, actions });
+      prepared = session.prepareSegment({
+        source: {
+          mapping: source.mapping,
+          leftPx: source.leftPx,
+          topPx: source.topPx,
+          widthPx: source.widthPx,
+          heightPx: source.heightPx,
+        },
+        actions,
+      });
     } catch {
       throw new ActBlockedError("input_unavailable");
     }
@@ -277,7 +313,7 @@ export async function actRegion(
         plan: effectPlan,
         now: () => new Date(intentTime.getTime()),
         environmentFingerprint: session.environmentFingerprint,
-        topologyFingerprint: session.topologyFingerprint
+        topologyFingerprint: session.topologyFingerprint,
       });
     } catch (error) {
       throw mapAuthorityError(error);
@@ -288,8 +324,17 @@ export async function actRegion(
       emitted = await session.emitPrepared(prepared);
     } catch (error) {
       if (error instanceof WindowsInputError) {
-        const state = error.phase === "input_unproven" ? "partial" : "indeterminate";
-        return transitionAfterFailure(lock, root, runId, intent, state, error.phase, now);
+        const state =
+          error.phase === "input_unproven" ? "partial" : "indeterminate";
+        return transitionAfterFailure(
+          lock,
+          root,
+          runId,
+          intent,
+          state,
+          error.phase,
+          now,
+        );
       }
       return transitionAfterFailure(
         lock,
@@ -298,7 +343,7 @@ export async function actRegion(
         intent,
         "indeterminate",
         "cleanup_unproven",
-        now
+        now,
       );
     }
     if (
@@ -314,17 +359,20 @@ export async function actRegion(
         intent,
         "indeterminate",
         "cleanup_unproven",
-        now
+        now,
       );
     }
 
     if (segment.outcome === "checkpoint") {
       let captured: RegionalCapture;
       try {
-        captured = await (dependencies.captureObservation ?? captureRegionalObservation)({
+        captured = await (
+          dependencies.captureObservation ?? captureRegionalObservation
+        )({
           selector: checkpointSelector!,
           runId,
-          workspaceFingerprint: fingerprint!
+          workspaceFingerprint: fingerprint!,
+          ttlMs: source.observationTtlMs,
         });
       } catch {
         return transitionAfterFailure(
@@ -334,7 +382,7 @@ export async function actRegion(
           intent,
           "partial",
           "checkpoint_capture_failed",
-          now
+          now,
         );
       }
       let published;
@@ -344,7 +392,7 @@ export async function actRegion(
           root,
           runId,
           captured.bundle,
-          { ...dependencies.publishOptions, resolveEffect: intent }
+          { ...dependencies.publishOptions, resolveEffect: intent },
         );
       } catch {
         return transitionAfterFailure(
@@ -354,7 +402,7 @@ export async function actRegion(
           intent,
           "partial",
           "checkpoint_publish_failed",
-          now
+          now,
         );
       }
       return Object.freeze({
@@ -368,8 +416,8 @@ export async function actRegion(
           capturedAt: captured.bundle.capture.capturedAt,
           expiresAt: captured.bundle.capture.expiresAt,
           actionable: true,
-          evictedHistoryCount: published.evictedHistoryCount
-        })
+          evictedHistoryCount: published.evictedHistoryCount,
+        }),
       });
     }
 
@@ -381,10 +429,11 @@ export async function actRegion(
     return Object.freeze({
       outcome: "completed",
       emittedActionCount: emitted.emittedActionCount,
-      emittedLeafActionCount: emitted.emittedLeafActionCount
+      emittedLeafActionCount: emitted.emittedLeafActionCount,
     });
   } catch (error) {
-    terminalError = error instanceof Error ? error : new ActInternalError("internal_error");
+    terminalError =
+      error instanceof Error ? error : new ActInternalError("internal_error");
     throw terminalError;
   } finally {
     if (session !== undefined) {
@@ -401,7 +450,10 @@ export async function actRegion(
     }
     if (terminalError !== undefined && !terminalError.message) {
       // A finally-stage uncertainty must dominate a successful return.
-      if (!(terminalError instanceof ActBlockedError) && !(terminalError instanceof ActPartialError)) {
+      if (
+        !(terminalError instanceof ActBlockedError) &&
+        !(terminalError instanceof ActPartialError)
+      ) {
         throw terminalError;
       }
     }

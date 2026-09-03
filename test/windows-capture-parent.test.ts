@@ -5,7 +5,7 @@ import {
   mkdtempSync,
   rmSync,
   truncateSync,
-  writeFileSync
+  writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -14,17 +14,18 @@ import { deflateSync } from "node:zlib";
 import { copyValidatedCaptureBundleBytes } from "../src/capture-bundle.js";
 import {
   bindRegionSelectorToDisplay,
-  deriveDisplayInventory
+  bindFullScreenSelectorToDisplays,
+  deriveDisplayInventory,
 } from "../src/display.js";
 import {
   RegionSelectorError,
   parseRegionSelector,
-  resolveRegionSelector
+  resolveRegionSelector,
 } from "../src/region.js";
 import {
   captureRegionalObservation,
   WindowsCaptureError,
-  type WindowsCaptureHelperExecution
+  type WindowsCaptureHelperExecution,
 } from "../src/windows-capture.js";
 
 function crc32(bytes: Buffer): number {
@@ -57,7 +58,7 @@ function pngBytes(): Buffer {
     Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]),
     chunk("IHDR", ihdr),
     chunk("IDAT", deflateSync(Buffer.from([0, 255, 0, 0, 0, 255, 0]))),
-    chunk("IEND", Buffer.alloc(0))
+    chunk("IEND", Buffer.alloc(0)),
   ]);
 }
 
@@ -65,8 +66,13 @@ function helperResult(
   requestId: string,
   destinationPath: string,
   png: Buffer,
-  sourceRectPx: Readonly<{ x: number; y: number; width: number; height: number }>
-): object {
+  sourceRectPx: Readonly<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  }>,
+): Record<string, unknown> {
   return {
     kind: "cu.windows-capture.result/v1",
     requestId,
@@ -79,21 +85,21 @@ function helperResult(
       connected: true,
       kind: "default",
       sessionId: 1,
-      desktopName: "Default"
+      desktopName: "Default",
     },
     foreground: { windowHandle: "0x0000000000001234", processId: 123 },
     image: {
       sha256: createHash("sha256").update(png).digest("hex"),
       byteLength: png.length,
       width: 2,
-      height: 1
-    }
+      height: 1,
+    },
   };
 }
 
 const virtualScreen = { x: -1920, y: 0, width: 3840, height: 1080 } as const;
 
-function helperStdout(value: object): Buffer {
+function helperStdout(value: Record<string, unknown>): Buffer {
   return Buffer.from(`${JSON.stringify(value)}\n`, "utf8");
 }
 
@@ -103,14 +109,14 @@ test("parses exact normalized and pixel region selector forms", () => {
     left: 100,
     top: 200,
     right: 800,
-    bottom: 700
+    bottom: 700,
   });
   assert.deepEqual(parseRegionSelector("pixel:-120,40,400,300"), {
     kind: "pixel",
     left: -120,
     top: 40,
     width: 400,
-    height: 300
+    height: 300,
   });
 });
 
@@ -121,7 +127,7 @@ test("maps inclusive normalized endpoint centers into one half-open virtual-scre
     x: -960,
     y: 270,
     width: 1920,
-    height: 540
+    height: 540,
   });
 });
 
@@ -130,7 +136,9 @@ test("admits one helper result into an owned exact capture bundle and removes co
   const image = pngBytes();
   const imageSha256 = createHash("sha256").update(image).digest("hex");
   let helperRequest: Record<string, unknown> | undefined;
-  const executeHelper = (requestText: string): WindowsCaptureHelperExecution => {
+  const executeHelper = (
+    requestText: string,
+  ): WindowsCaptureHelperExecution => {
     helperRequest = JSON.parse(requestText) as Record<string, unknown>;
     const destinationPath = String(helperRequest.destinationPath);
     writeFileSync(destinationPath, image, { flag: "wx" });
@@ -149,12 +157,17 @@ test("admits one helper result into an owned exact capture bundle and removes co
           connected: true,
           kind: "default",
           sessionId: 1,
-          desktopName: "Default"
+          desktopName: "Default",
         },
         foreground: { windowHandle: "0x0000000000001234", processId: 42 },
-        image: { sha256: imageSha256, byteLength: image.length, width: 2, height: 1 }
+        image: {
+          sha256: imageSha256,
+          byteLength: image.length,
+          width: 2,
+          height: 1,
+        },
       }),
-      stderr: Buffer.alloc(0)
+      stderr: Buffer.alloc(0),
     };
   };
 
@@ -162,7 +175,7 @@ test("admits one helper result into an owned exact capture bundle and removes co
     {
       selector: parseRegionSelector("pixel:10,20,2,1"),
       runId: "work-a",
-      workspaceFingerprint: "a".repeat(64)
+      workspaceFingerprint: "a".repeat(64),
     },
     {
       createObservationId: () => "obs_0123456789abcdef0123456789abcdef",
@@ -170,8 +183,9 @@ test("admits one helper result into an owned exact capture bundle and removes co
       createTempRoot: () => root,
       executeHelper,
       now: () => new Date("2026-07-25T10:00:00.000Z"),
-      removeTempRoot: (path: string) => rmSync(path, { recursive: true, force: true })
-    }
+      removeTempRoot: (path: string) =>
+        rmSync(path, { recursive: true, force: true }),
+    },
   );
 
   assert.equal(helperRequest?.kind, "cu.windows-capture.request/v1");
@@ -180,37 +194,44 @@ test("admits one helper result into an owned exact capture bundle and removes co
     left: 10,
     top: 20,
     width: 2,
-    height: 1
+    height: 1,
   });
   assert.equal(captured.observationId, "obs_0123456789abcdef0123456789abcdef");
   assert.equal(captured.capturedAt, "2026-07-25T10:00:00.000Z");
-  assert.equal(captured.expiresAt, "2026-07-25T10:01:00.000Z");
+  assert.equal(captured.expiresAt, "2026-07-25T10:05:00.000Z");
   const expectedTopologyFingerprint = createHash("sha256")
-    .update(JSON.stringify({
-      virtualScreen: { x: 0, y: 0, width: 1920, height: 1080 },
-      monitors: [{ x: 0, y: 0, width: 1920, height: 1080, primary: true }]
-    }))
+    .update(
+      JSON.stringify({
+        virtualScreen: { x: 0, y: 0, width: 1920, height: 1080 },
+        monitors: [{ x: 0, y: 0, width: 1920, height: 1080, primary: true }],
+      }),
+    )
     .digest("hex");
   assert.equal(captured.topologyFingerprint, expectedTopologyFingerprint);
   assert.equal(
     captured.environmentFingerprint,
     createHash("sha256")
-      .update(JSON.stringify({
-        topologyFingerprint: expectedTopologyFingerprint,
-        desktop: {
-          interactive: true,
-          connected: true,
-          kind: "default",
-          sessionId: 1,
-          desktopName: "Default"
-        },
-        foreground: { windowHandle: "0x0000000000001234", processId: 42 }
-      }))
-      .digest("hex")
+      .update(
+        JSON.stringify({
+          topologyFingerprint: expectedTopologyFingerprint,
+          desktop: {
+            interactive: true,
+            connected: true,
+            kind: "default",
+            sessionId: 1,
+            desktopName: "Default",
+          },
+          foreground: { windowHandle: "0x0000000000001234", processId: 42 },
+        }),
+      )
+      .digest("hex"),
   );
   const copied = copyValidatedCaptureBundleBytes(captured.bundle);
   assert.deepEqual(copied.image, image);
-  const sidecar = JSON.parse(copied.captureMetadata.toString("utf8")) as Record<string, unknown>;
+  const sidecar = JSON.parse(copied.captureMetadata.toString("utf8")) as Record<
+    string,
+    unknown
+  >;
   assert.equal(sidecar.observationId, captured.observationId);
   assert.deepEqual(sidecar.source, {
     captureKind: "region",
@@ -218,17 +239,149 @@ test("admits one helper result into an owned exact capture bundle and removes co
     leftPx: 10,
     topPx: 20,
     widthPx: 2,
-    heightPx: 1
+    heightPx: 1,
   });
   assert.deepEqual(sidecar.image, {
     mediaType: "image/png",
     sha256: imageSha256,
     byteLength: image.length,
     width: 2,
-    height: 1
+    height: 1,
   });
-  assert.equal(copied.captureMetadata.includes(Buffer.from("0x0000000000001234")), false);
+  assert.equal(
+    copied.captureMetadata.includes(Buffer.from("0x0000000000001234")),
+    false,
+  );
   assert.equal(existsSync(root), false);
+});
+
+test("supports an explicitly unlimited observation lifetime", async () => {
+  const root = mkdtempSync(join(tmpdir(), "cu-windows-capture-unlimited-"));
+  const image = pngBytes();
+  const imageSha256 = createHash("sha256").update(image).digest("hex");
+  let helperRequest: Record<string, unknown> | undefined;
+  const executeHelper = (requestText: string) => {
+    helperRequest = JSON.parse(requestText) as Record<string, unknown>;
+    writeFileSync(String(helperRequest.destinationPath), image, { flag: "wx" });
+    return {
+      status: 0,
+      signal: null,
+      stderr: Buffer.alloc(0),
+      stdout: helperStdout({
+        kind: "cu.windows-capture.result/v1",
+        requestId: String(helperRequest.requestId),
+        destinationPath: String(helperRequest.destinationPath),
+        sourceRectPx: { x: 10, y: 20, width: 2, height: 1 },
+        virtualScreen: { x: 0, y: 0, width: 1920, height: 1080 },
+        monitors: [{ x: 0, y: 0, width: 1920, height: 1080, primary: true }],
+        desktop: {
+          interactive: true,
+          connected: true,
+          kind: "default",
+          sessionId: 1,
+          desktopName: "Default",
+        },
+        foreground: { windowHandle: "0x0000000000001234", processId: 42 },
+        image: {
+          sha256: imageSha256,
+          byteLength: image.length,
+          width: 2,
+          height: 1,
+        },
+      }),
+    };
+  };
+
+  const captured = await captureRegionalObservation(
+    {
+      selector: parseRegionSelector("pixel:10,20,2,1"),
+      runId: "work-a",
+      workspaceFingerprint: "a".repeat(64),
+      ttlMs: null,
+    },
+    {
+      createObservationId: () => "obs_1123456789abcdef0123456789abcdef",
+      createRequestId: () => "req_1123456789abcdef0123456789abcdef",
+      createTempRoot: () => root,
+      executeHelper,
+      now: () => new Date("2026-07-25T10:00:00.000Z"),
+      removeTempRoot: (path: string) =>
+        rmSync(path, { recursive: true, force: true }),
+    },
+  );
+
+  assert.equal(helperRequest?.kind, "cu.windows-capture.request/v1");
+  assert.equal(captured.expiresAt, null);
+});
+
+test("captures an explicit full-screen selector and labels its evidence as full", async (t) => {
+  const root = mkdtempSync(join(tmpdir(), "cu-windows-capture-full-screen-"));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const image = pngBytes();
+  const inventory = deriveDisplayInventory({
+    virtualScreen: { x: 0, y: 0, width: 100, height: 100 },
+    monitors: [{ x: 0, y: 0, width: 100, height: 100, primary: true }],
+  });
+  const selector = bindFullScreenSelectorToDisplays([
+    inventory.displays[0]!.displayId,
+  ]);
+  let helperRequest: Record<string, unknown> | undefined;
+  const captured = await captureRegionalObservation(
+    {
+      selector,
+      runId: "work-a",
+      workspaceFingerprint: "a".repeat(64),
+    },
+    {
+      createObservationId: () => "obs_2123456789abcdef0123456789abcdef",
+      createRequestId: () => "req_2123456789abcdef0123456789abcdef",
+      createTempRoot: () => root,
+      now: () => new Date("2026-07-25T10:00:00.000Z"),
+      executeHelper(requestText: string): WindowsCaptureHelperExecution {
+        helperRequest = JSON.parse(requestText) as Record<string, unknown>;
+        const destinationPath = String(helperRequest.destinationPath);
+        writeFileSync(destinationPath, image, { flag: "wx" });
+        return {
+          status: 0,
+          signal: null,
+          stderr: Buffer.alloc(0),
+          stdout: helperStdout(
+            helperResult(
+              String(helperRequest.requestId),
+              destinationPath,
+              image,
+              { x: 0, y: 0, width: 100, height: 100 },
+            ),
+          ),
+        };
+      },
+      removeTempRoot: (path: string) =>
+        rmSync(path, { recursive: true, force: true }),
+    },
+  );
+
+  assert.deepEqual(helperRequest?.selector, selector);
+  const sidecar = JSON.parse(
+    copyValidatedCaptureBundleBytes(captured.bundle).captureMetadata.toString(
+      "utf8",
+    ),
+  ) as {
+    source: {
+      captureKind: string;
+      leftPx: number;
+      topPx: number;
+      widthPx: number;
+      heightPx: number;
+    };
+  };
+  assert.deepEqual(sidecar.source, {
+    captureKind: "full",
+    mapping: "normalized_endpoint_centers/v1",
+    leftPx: 0,
+    topPx: 0,
+    widthPx: 100,
+    heightPx: 100,
+  });
 });
 
 test("admits a region only when the helper topology preserves its selected display", async () => {
@@ -236,13 +389,13 @@ test("admits a region only when the helper topology preserves its selected displ
     virtualScreen: { x: 0, y: 0, width: 200, height: 100 },
     monitors: [
       { x: 0, y: 0, width: 100, height: 100, primary: true },
-      { x: 100, y: 0, width: 100, height: 100, primary: false }
-    ]
+      { x: 100, y: 0, width: 100, height: 100, primary: false },
+    ],
   } as const;
   const displayId = deriveDisplayInventory(topology).displays[1]!.displayId;
   const selector = bindRegionSelectorToDisplay(
     displayId,
-    parseRegionSelector("pixel:110,20,2,1")
+    parseRegionSelector("pixel:110,20,2,1"),
   );
   const root = mkdtempSync(join(tmpdir(), "cu-windows-capture-display-bound-"));
   const image = pngBytes();
@@ -252,7 +405,7 @@ test("admits a region only when the helper topology preserves its selected displ
     {
       selector,
       runId: "work-a",
-      workspaceFingerprint: "1".repeat(64)
+      workspaceFingerprint: "1".repeat(64),
     },
     {
       createObservationId: () => `obs_${"1".repeat(32)}`,
@@ -277,28 +430,34 @@ test("admits a region only when the helper topology preserves its selected displ
               connected: true,
               kind: "default",
               sessionId: 1,
-              desktopName: "Default"
+              desktopName: "Default",
             },
             foreground: { windowHandle: "0x0000000000001234", processId: 42 },
             image: {
               sha256: createHash("sha256").update(image).digest("hex"),
               byteLength: image.length,
               width: 2,
-              height: 1
-            }
-          })
+              height: 1,
+            },
+          }),
         };
       },
-      removeTempRoot: (path: string) => rmSync(path, { recursive: true, force: true })
-    }
+      removeTempRoot: (path: string) =>
+        rmSync(path, { recursive: true, force: true }),
+    },
   );
 
   assert.deepEqual(helperRequest?.selector, {
     kind: "display_region",
     displayId,
-    region: { kind: "pixel", left: 110, top: 20, width: 2, height: 1 }
+    region: { kind: "pixel", left: 110, top: 20, width: 2, height: 1 },
   });
-  assert.deepEqual(captured.sourceRectPx, { x: 110, y: 20, width: 2, height: 1 });
+  assert.deepEqual(captured.sourceRectPx, {
+    x: 110,
+    y: 20,
+    width: 2,
+    height: 1,
+  });
   assert.equal(existsSync(root), false);
 });
 
@@ -307,12 +466,12 @@ test("rejects a helper capture produced under a topology that makes the display 
     virtualScreen: { x: 0, y: 0, width: 200, height: 100 },
     monitors: [
       { x: 0, y: 0, width: 100, height: 100, primary: true },
-      { x: 100, y: 0, width: 100, height: 100, primary: false }
-    ]
+      { x: 100, y: 0, width: 100, height: 100, primary: false },
+    ],
   } as const;
   const selector = bindRegionSelectorToDisplay(
     deriveDisplayInventory(requestedTopology).displays[1]!.displayId,
-    parseRegionSelector("pixel:110,20,2,1")
+    parseRegionSelector("pixel:110,20,2,1"),
   );
   const root = mkdtempSync(join(tmpdir(), "cu-windows-capture-stale-display-"));
   const image = pngBytes();
@@ -322,14 +481,17 @@ test("rejects a helper capture produced under a topology that makes the display 
       {
         selector,
         runId: "work-a",
-        workspaceFingerprint: "2".repeat(64)
+        workspaceFingerprint: "2".repeat(64),
       },
       {
         createObservationId: () => `obs_${"2".repeat(32)}`,
         createRequestId: () => `req_${"2".repeat(32)}`,
         createTempRoot: () => root,
         executeHelper(requestText: string): WindowsCaptureHelperExecution {
-          const request = JSON.parse(requestText) as { requestId: string; destinationPath: string };
+          const request = JSON.parse(requestText) as {
+            requestId: string;
+            destinationPath: string;
+          };
           writeFileSync(request.destinationPath, image, { flag: "wx" });
           return {
             status: 0,
@@ -341,28 +503,32 @@ test("rejects a helper capture produced under a topology that makes the display 
               destinationPath: request.destinationPath,
               sourceRectPx: { x: 110, y: 20, width: 2, height: 1 },
               virtualScreen: { x: 0, y: 0, width: 200, height: 100 },
-              monitors: [{ x: 0, y: 0, width: 200, height: 100, primary: true }],
+              monitors: [
+                { x: 0, y: 0, width: 200, height: 100, primary: true },
+              ],
               desktop: {
                 interactive: true,
                 connected: true,
                 kind: "default",
                 sessionId: 1,
-                desktopName: "Default"
+                desktopName: "Default",
               },
               foreground: { windowHandle: "0x0000000000001234", processId: 42 },
               image: {
                 sha256: createHash("sha256").update(image).digest("hex"),
                 byteLength: image.length,
                 width: 2,
-                height: 1
-              }
-            })
+                height: 1,
+              },
+            }),
           };
         },
-        removeTempRoot: (path: string) => rmSync(path, { recursive: true, force: true })
-      }
+        removeTempRoot: (path: string) =>
+          rmSync(path, { recursive: true, force: true }),
+      },
     ),
-    (error: unknown) => error instanceof WindowsCaptureError && error.message === ""
+    (error: unknown) =>
+      error instanceof WindowsCaptureError && error.message === "",
   );
   assert.equal(existsSync(root), false);
 });
@@ -375,30 +541,36 @@ test("rejects a helper source rectangle that does not match the parent selector 
       {
         selector: parseRegionSelector("pixel:0,0,2,1"),
         runId: "work-a",
-        workspaceFingerprint: "c".repeat(64)
+        workspaceFingerprint: "c".repeat(64),
       },
       {
         createObservationId: () => `obs_${"3".repeat(32)}`,
         createRequestId: () => `req_${"4".repeat(32)}`,
         createTempRoot: () => root,
         executeHelper(requestText: string): WindowsCaptureHelperExecution {
-          const request = JSON.parse(requestText) as { requestId: string; destinationPath: string };
+          const request = JSON.parse(requestText) as {
+            requestId: string;
+            destinationPath: string;
+          };
           writeFileSync(request.destinationPath, png, { flag: "wx" });
           return {
             status: 0,
             signal: null,
             stderr: Buffer.alloc(0),
-            stdout: helperStdout(helperResult(request.requestId, request.destinationPath, png, {
-              x: 1,
-              y: 0,
-              width: 2,
-              height: 1
-            }))
+            stdout: helperStdout(
+              helperResult(request.requestId, request.destinationPath, png, {
+                x: 1,
+                y: 0,
+                width: 2,
+                height: 1,
+              }),
+            ),
           };
-        }
-      }
+        },
+      },
     ),
-    (error: unknown) => error instanceof WindowsCaptureError && error.message === ""
+    (error: unknown) =>
+      error instanceof WindowsCaptureError && error.message === "",
   );
   assert.equal(existsSync(root), false);
 });
@@ -411,20 +583,23 @@ test("refuses a missing runtime selector before helper or TEMP side effects", as
       {
         selector: undefined as never,
         runId: "work-a",
-        workspaceFingerprint: "f".repeat(64)
+        workspaceFingerprint: "f".repeat(64),
       },
       {
         createTempRoot() {
           createdTemp += 1;
-          return mkdtempSync(join(tmpdir(), "cu-windows-capture-missing-selector-"));
+          return mkdtempSync(
+            join(tmpdir(), "cu-windows-capture-missing-selector-"),
+          );
         },
         executeHelper() {
           helperCalls += 1;
           throw new Error("must not execute");
-        }
-      }
+        },
+      },
     ),
-    (error: unknown) => error instanceof WindowsCaptureError && error.message === ""
+    (error: unknown) =>
+      error instanceof WindowsCaptureError && error.message === "",
   );
   assert.equal(createdTemp, 0);
   assert.equal(helperCalls, 0);
@@ -437,7 +612,7 @@ test("contains helper diagnostics and removes TEMP on helper failure", async () 
       {
         selector: parseRegionSelector("pixel:0,0,2,1"),
         runId: "work-a",
-        workspaceFingerprint: "e".repeat(64)
+        workspaceFingerprint: "e".repeat(64),
       },
       {
         createTempRoot: () => root,
@@ -446,15 +621,15 @@ test("contains helper diagnostics and removes TEMP on helper failure", async () 
             status: 3,
             signal: null,
             stdout: Buffer.alloc(0),
-            stderr: Buffer.from("private helper path and target title", "utf8")
+            stderr: Buffer.from("private helper path and target title", "utf8"),
           };
-        }
-      }
+        },
+      },
     ),
     (error: unknown) =>
       error instanceof WindowsCaptureError &&
       error.message === "" &&
-      !String(error).includes("private helper")
+      !String(error).includes("private helper"),
   );
   assert.equal(existsSync(root), false);
 });
@@ -467,7 +642,7 @@ test("rejects a malformed run binding before helper or TEMP side effects", async
       {
         selector: parseRegionSelector("pixel:0,0,2,1"),
         runId: "Work-A",
-        workspaceFingerprint: "d".repeat(64)
+        workspaceFingerprint: "d".repeat(64),
       },
       {
         createTempRoot() {
@@ -477,10 +652,11 @@ test("rejects a malformed run binding before helper or TEMP side effects", async
         executeHelper() {
           helperCalls += 1;
           throw new Error("must not execute");
-        }
-      }
+        },
+      },
     ),
-    (error: unknown) => error instanceof WindowsCaptureError && error.message === ""
+    (error: unknown) =>
+      error instanceof WindowsCaptureError && error.message === "",
   );
   assert.equal(createdTemp, 0);
   assert.equal(helperCalls, 0);
@@ -492,22 +668,31 @@ test("rejects a structural selector forgery before helper or TEMP side effects",
   await assert.rejects(
     captureRegionalObservation(
       {
-        selector: Object.freeze({ kind: "pixel", left: 0, top: 0, width: 2, height: 1 }) as never,
+        selector: Object.freeze({
+          kind: "pixel",
+          left: 0,
+          top: 0,
+          width: 2,
+          height: 1,
+        }) as never,
         runId: "work-a",
-        workspaceFingerprint: "7".repeat(64)
+        workspaceFingerprint: "7".repeat(64),
       },
       {
         createTempRoot() {
           createdTemp += 1;
-          return mkdtempSync(join(tmpdir(), "cu-windows-capture-forged-selector-"));
+          return mkdtempSync(
+            join(tmpdir(), "cu-windows-capture-forged-selector-"),
+          );
         },
         executeHelper() {
           helperCalls += 1;
           throw new Error("must not execute");
-        }
-      }
+        },
+      },
     ),
-    (error: unknown) => error instanceof WindowsCaptureError && error.message === ""
+    (error: unknown) =>
+      error instanceof WindowsCaptureError && error.message === "",
   );
   assert.equal(createdTemp, 0);
   assert.equal(helperCalls, 0);
@@ -517,64 +702,83 @@ test("rejects malformed helper stdout bytes and shapes without trusting destinat
   const image = pngBytes();
   const imageSha256 = createHash("sha256").update(image).digest("hex");
   const validResult = (requestId: string, destinationPath: string) =>
-    helperResult(requestId, destinationPath, image, { x: 0, y: 0, width: 2, height: 1 });
+    helperResult(requestId, destinationPath, image, {
+      x: 0,
+      y: 0,
+      width: 2,
+      height: 1,
+    });
   const cases = [
     {
       name: "invalid utf8 inside json string",
       stdout(requestId: string, destinationPath: string) {
         const prefix = Buffer.from(
           `{"kind":"cu.windows-capture.result/v1","requestId":${JSON.stringify(requestId)},"destinationPath":${JSON.stringify(destinationPath)},"sourceRectPx":{"x":0,"y":0,"width":2,"height":1},"virtualScreen":{"x":0,"y":0,"width":100,"height":100},"monitors":[{"x":0,"y":0,"width":100,"height":100,"primary":true}],"desktop":{"interactive":true,"connected":true,"kind":"default","sessionId":1,"desktopName":"`,
-          "utf8"
+          "utf8",
         );
         const suffix = Buffer.from(
           `"},"foreground":{"windowHandle":"0x0000000000001234","processId":123},"image":{"sha256":"${imageSha256}","byteLength":${image.length},"width":2,"height":1}}\n`,
-          "utf8"
+          "utf8",
         );
         return Buffer.concat([prefix, Buffer.from([0xc3, 0x28]), suffix]);
-      }
+      },
     },
     {
       name: "duplicate key",
-      stdout: (requestId: string, destinationPath: string) => Buffer.from(
-        `{"kind":"ignored","kind":"cu.windows-capture.result/v1","requestId":${JSON.stringify(requestId)},"destinationPath":${JSON.stringify(destinationPath)},"sourceRectPx":{"x":0,"y":0,"width":2,"height":1},"virtualScreen":{"x":0,"y":0,"width":100,"height":100},"monitors":[{"x":0,"y":0,"width":100,"height":100,"primary":true}],"desktop":{"interactive":true,"connected":true,"kind":"default","sessionId":1,"desktopName":"Default"},"foreground":{"windowHandle":"0x0000000000001234","processId":123},"image":{"sha256":"${imageSha256}","byteLength":${image.length},"width":2,"height":1}}\n`,
-        "utf8"
-      )
+      stdout: (requestId: string, destinationPath: string) =>
+        Buffer.from(
+          `{"kind":"ignored","kind":"cu.windows-capture.result/v1","requestId":${JSON.stringify(requestId)},"destinationPath":${JSON.stringify(destinationPath)},"sourceRectPx":{"x":0,"y":0,"width":2,"height":1},"virtualScreen":{"x":0,"y":0,"width":100,"height":100},"monitors":[{"x":0,"y":0,"width":100,"height":100,"primary":true}],"desktop":{"interactive":true,"connected":true,"kind":"default","sessionId":1,"desktopName":"Default"},"foreground":{"windowHandle":"0x0000000000001234","processId":123},"image":{"sha256":"${imageSha256}","byteLength":${image.length},"width":2,"height":1}}\n`,
+          "utf8",
+        ),
     },
     {
       name: "extra key",
-      stdout: (requestId: string, destinationPath: string) => helperStdout({
-        ...validResult(requestId, destinationPath),
-        extra: true
-      })
-    }
+      stdout: (requestId: string, destinationPath: string) =>
+        helperStdout({
+          ...validResult(requestId, destinationPath),
+          extra: true,
+        }),
+    },
   ];
 
   for (const current of cases) {
-    const root = mkdtempSync(join(tmpdir(), `cu-windows-capture-stdout-${current.name.replaceAll(" ", "-")}-`));
+    const root = mkdtempSync(
+      join(
+        tmpdir(),
+        `cu-windows-capture-stdout-${current.name.replaceAll(" ", "-")}-`,
+      ),
+    );
     await assert.rejects(
       captureRegionalObservation(
         {
           selector: parseRegionSelector("pixel:0,0,2,1"),
           runId: "work-a",
-          workspaceFingerprint: "8".repeat(64)
+          workspaceFingerprint: "8".repeat(64),
         },
         {
           createRequestId: () => `req_${"8".repeat(32)}`,
           createTempRoot: () => root,
           executeHelper(requestText: string): WindowsCaptureHelperExecution {
-            const request = JSON.parse(requestText) as { requestId: string; destinationPath: string };
+            const request = JSON.parse(requestText) as {
+              requestId: string;
+              destinationPath: string;
+            };
             writeFileSync(request.destinationPath, image, { flag: "wx" });
             return {
               status: 0,
               signal: null,
-              stdout: current.stdout(request.requestId, request.destinationPath),
-              stderr: Buffer.alloc(0)
+              stdout: current.stdout(
+                request.requestId,
+                request.destinationPath,
+              ),
+              stderr: Buffer.alloc(0),
             };
-          }
-        }
+          },
+        },
       ),
-      (error: unknown) => error instanceof WindowsCaptureError && error.message === "",
-      current.name
+      (error: unknown) =>
+        error instanceof WindowsCaptureError && error.message === "",
+      current.name,
     );
     assert.equal(existsSync(root), false, current.name);
   }
@@ -586,116 +790,147 @@ test("rejects helper image metadata mismatches and oversized destination files",
     { name: "sha", image: { sha256: "0".repeat(64) } },
     { name: "byteLength", image: { byteLength: image.length + 1 } },
     { name: "width", image: { width: 3 } },
-    { name: "height", image: { height: 2 } }
+    { name: "height", image: { height: 2 } },
   ];
 
   for (const current of mismatches) {
-    const root = mkdtempSync(join(tmpdir(), `cu-windows-capture-metadata-${current.name}-`));
+    const root = mkdtempSync(
+      join(tmpdir(), `cu-windows-capture-metadata-${current.name}-`),
+    );
     await assert.rejects(
       captureRegionalObservation(
         {
           selector: parseRegionSelector("pixel:0,0,2,1"),
           runId: "work-a",
-          workspaceFingerprint: "9".repeat(64)
+          workspaceFingerprint: "9".repeat(64),
         },
         {
           createRequestId: () => `req_${"9".repeat(32)}`,
           createTempRoot: () => root,
           executeHelper(requestText: string): WindowsCaptureHelperExecution {
-            const request = JSON.parse(requestText) as { requestId: string; destinationPath: string };
+            const request = JSON.parse(requestText) as {
+              requestId: string;
+              destinationPath: string;
+            };
             writeFileSync(request.destinationPath, image, { flag: "wx" });
-            const base = helperResult(request.requestId, request.destinationPath, image, {
-              x: 0,
-              y: 0,
-              width: 2,
-              height: 1
-            }) as { image: Record<string, unknown> };
+            const base = helperResult(
+              request.requestId,
+              request.destinationPath,
+              image,
+              {
+                x: 0,
+                y: 0,
+                width: 2,
+                height: 1,
+              },
+            ) as { image: Record<string, unknown> };
             return {
               status: 0,
               signal: null,
-              stdout: helperStdout({ ...base, image: { ...base.image, ...current.image } }),
-              stderr: Buffer.alloc(0)
+              stdout: helperStdout({
+                ...base,
+                image: { ...base.image, ...current.image },
+              }),
+              stderr: Buffer.alloc(0),
             };
-          }
-        }
+          },
+        },
       ),
-      (error: unknown) => error instanceof WindowsCaptureError && error.message === "",
-      current.name
+      (error: unknown) =>
+        error instanceof WindowsCaptureError && error.message === "",
+      current.name,
     );
     assert.equal(existsSync(root), false, current.name);
   }
 
-  const root = mkdtempSync(join(tmpdir(), "cu-windows-capture-oversized-destination-"));
+  const root = mkdtempSync(
+    join(tmpdir(), "cu-windows-capture-oversized-destination-"),
+  );
   await assert.rejects(
     captureRegionalObservation(
       {
         selector: parseRegionSelector("pixel:0,0,2,1"),
         runId: "work-a",
-        workspaceFingerprint: "a".repeat(64)
+        workspaceFingerprint: "a".repeat(64),
       },
       {
         createRequestId: () => `req_${"a".repeat(32)}`,
         createTempRoot: () => root,
         executeHelper(requestText: string): WindowsCaptureHelperExecution {
-          const request = JSON.parse(requestText) as { requestId: string; destinationPath: string };
-          writeFileSync(request.destinationPath, Buffer.from([0]), { flag: "wx" });
+          const request = JSON.parse(requestText) as {
+            requestId: string;
+            destinationPath: string;
+          };
+          writeFileSync(request.destinationPath, Buffer.from([0]), {
+            flag: "wx",
+          });
           truncateSync(request.destinationPath, 67_108_865);
           return {
             status: 0,
             signal: null,
-            stdout: helperStdout(helperResult(request.requestId, request.destinationPath, image, {
-              x: 0,
-              y: 0,
-              width: 2,
-              height: 1
-            })),
-            stderr: Buffer.alloc(0)
+            stdout: helperStdout(
+              helperResult(request.requestId, request.destinationPath, image, {
+                x: 0,
+                y: 0,
+                width: 2,
+                height: 1,
+              }),
+            ),
+            stderr: Buffer.alloc(0),
           };
-        }
-      }
+        },
+      },
     ),
-    (error: unknown) => error instanceof WindowsCaptureError && error.message === ""
+    (error: unknown) =>
+      error instanceof WindowsCaptureError && error.message === "",
   );
   assert.equal(existsSync(root), false);
 });
 
 test("reports cleanup failure as the same content-free capture error", async () => {
-  const root = mkdtempSync(join(tmpdir(), "cu-windows-capture-cleanup-failure-"));
+  const root = mkdtempSync(
+    join(tmpdir(), "cu-windows-capture-cleanup-failure-"),
+  );
   const image = pngBytes();
   await assert.rejects(
     captureRegionalObservation(
       {
         selector: parseRegionSelector("pixel:0,0,2,1"),
         runId: "work-a",
-        workspaceFingerprint: "b".repeat(64)
+        workspaceFingerprint: "b".repeat(64),
       },
       {
         createRequestId: () => `req_${"b".repeat(32)}`,
         createTempRoot: () => root,
         executeHelper(requestText: string): WindowsCaptureHelperExecution {
-          const request = JSON.parse(requestText) as { requestId: string; destinationPath: string };
+          const request = JSON.parse(requestText) as {
+            requestId: string;
+            destinationPath: string;
+          };
           writeFileSync(request.destinationPath, image, { flag: "wx" });
           return {
             status: 0,
             signal: null,
-            stdout: helperStdout(helperResult(request.requestId, request.destinationPath, image, {
-              x: 0,
-              y: 0,
-              width: 2,
-              height: 1
-            })),
-            stderr: Buffer.alloc(0)
+            stdout: helperStdout(
+              helperResult(request.requestId, request.destinationPath, image, {
+                x: 0,
+                y: 0,
+                width: 2,
+                height: 1,
+              }),
+            ),
+            stderr: Buffer.alloc(0),
           };
         },
         removeTempRoot() {
           throw new Error("private cleanup path");
-        }
-      }
+        },
+      },
     ),
     (error: unknown) =>
       error instanceof WindowsCaptureError &&
       error.message === "" &&
-      !String(error).includes("private cleanup")
+      !String(error).includes("private cleanup"),
   );
   rmSync(root, { recursive: true, force: true });
 });
@@ -712,22 +947,34 @@ test("rejects noncanonical, out-of-range, inverted, oversized, and full-screen s
     "pixel:1,2,4097,4",
     "pixel:1, 2,3,4",
     "pixels:1,2,3,4",
-    ""
+    "",
   ];
   for (const value of rejected) {
     assert.throws(() => parseRegionSelector(value), RegionSelectorError, value);
   }
 
   assert.throws(
-    () => resolveRegionSelector(parseRegionSelector("normalized:0,0,999,999"), virtualScreen),
-    RegionSelectorError
+    () =>
+      resolveRegionSelector(
+        parseRegionSelector("normalized:0,0,999,999"),
+        virtualScreen,
+      ),
+    RegionSelectorError,
   );
   assert.throws(
-    () => resolveRegionSelector(parseRegionSelector("pixel:-1920,0,3840,1080"), virtualScreen),
-    RegionSelectorError
+    () =>
+      resolveRegionSelector(
+        parseRegionSelector("pixel:-1920,0,3840,1080"),
+        virtualScreen,
+      ),
+    RegionSelectorError,
   );
   assert.throws(
-    () => resolveRegionSelector(parseRegionSelector("pixel:2000,100,400,300"), virtualScreen),
-    RegionSelectorError
+    () =>
+      resolveRegionSelector(
+        parseRegionSelector("pixel:2000,100,400,300"),
+        virtualScreen,
+      ),
+    RegionSelectorError,
   );
 });

@@ -10,17 +10,14 @@ import {
   ActIndeterminateError,
   ActInternalError,
   ActPartialError,
-  type ActRegionResult
+  type ActRegionResult,
 } from "./act.js";
-import {
-  ActionInputError,
-  readActionInput
-} from "./action-input.js";
+import { ActionInputError, readActionInput } from "./action-input.js";
 import {
   ArchiveCleanupError,
   ArchiveCleanupPublicationUncertainError,
   clearAllObservations,
-  clearRangeObservations
+  clearRangeObservations,
 } from "./archive-cleanup.js";
 import {
   ArchiveQueryBlockedError,
@@ -31,14 +28,15 @@ import {
   listWorkspaceRuns,
   showRunHistory,
   type RunStatusResult,
-  type WorkspaceRunSummary
+  type WorkspaceRunSummary,
 } from "./archive-query.js";
-import { type NormalizedActionPlan } from "./action-file.js";
+import type { NormalizedActionPlan } from "./action-file.js";
 import {
+  bindFullScreenSelectorToDisplays,
   bindRegionSelectorToDisplay,
   isDisplayId,
   type CaptureSelector,
-  type DisplayInventory
+  type DisplayInventory,
 } from "./display.js";
 import { isRunId } from "./identifiers.js";
 import {
@@ -46,10 +44,17 @@ import {
   ObserveArchiveError,
   ObserveCaptureError,
   ObserveQuotaError,
-  ObserveWorkspaceError
+  ObserveWorkspaceError,
 } from "./observe.js";
 import { parseRegionSelector, type RegionSelector } from "./region.js";
-import { queryWindowsDisplays, WindowsDisplayError } from "./windows-capture.js";
+import {
+  MAX_OBSERVATION_TTL_SECONDS,
+  type ObservationTtlMs,
+} from "./observation-expiry.js";
+import {
+  queryWindowsDisplays,
+  WindowsDisplayError,
+} from "./windows-capture.js";
 import { inspectRun, RunStateError } from "./run.js";
 import { acquireRunLock, RunLockBusyError } from "./run-lock.js";
 import { initializeWorkspace, inspectWorkspace } from "./workspace.js";
@@ -58,54 +63,56 @@ const helpEntries: Readonly<Record<string, string>> = Object.freeze({
   init: [
     "cu init [--json]",
     "Initialize or validate the workspace control record without desktop effects.",
-    "JSON success: cu.init.result/v1"
+    "JSON success: cu.init.result/v1",
   ].join("\n"),
   displays: [
     "cu displays [--json]",
     "List topology-bound display placements without capture or workspace state.",
-    "JSON success: cu.displays.result/v1"
+    "JSON success: cu.displays.result/v1",
   ].join("\n"),
   observe: [
-    "cu observe <run_id> [--region <normalized-or-pixel-rectangle>] [--display <display_id>] [--json]",
+    "cu observe <run_id> (--region <normalized-or-pixel-rectangle> [--display <display_id>] | --full-screen <display_id[,display_id...]>) [--ttl <seconds|unlimited>] [--json]",
     "Capture and publish one validated observation for the current workspace run.",
     "--display requires --region and binds it to one topology-bound display placement.",
-    "JSON success: cu.observe.result/v1"
+    "--full-screen requires one or more display IDs from cu displays; comma-separate IDs for multiple screens.",
+    "--ttl defaults to 300 seconds; use positive whole seconds or unlimited (expiresAt is null).",
+    "JSON success: cu.observe.result/v1",
   ].join("\n"),
   act: [
     "cu act <run_id> --action-file <path|-> [--json]",
     "Successful completed or checkpoint outcomes use cu.act.result/v1.",
-    "Blocked, partial, or indeterminate outcomes use cu.error/v1 with exit 3, 4, or 5."
+    "Blocked, partial, or indeterminate outcomes use cu.error/v1 with exit 3, 4, or 5.",
   ].join("\n"),
   "action-file": [
     "cu.action/v1 action file",
     "{",
-    "  \"kind\": \"cu.action/v1\",",
-    "  \"observationId\": \"obs_example\",",
-    "  \"coordinateSpace\": \"normalized_999_top_left\",",
-    "  \"actions\": [",
-    "    { \"kind\": \"click\", \"at\": { \"x\": 500, \"y\": 500 } }",
+    '  "kind": "cu.action/v1",',
+    '  "observationId": "obs_example",',
+    '  "coordinateSpace": "normalized_999_top_left",',
+    '  "actions": [',
+    '    { "kind": "click", "at": { "x": 500, "y": 500 } }',
     "  ]",
     "}",
-    "The file is bounded, exact-key JSON and never persists type_text content in diagnostics."
+    "The file is bounded, exact-key JSON and never persists type_text content in diagnostics.",
   ].join("\n"),
   history: [
     "cu history <run_id> [list] [--json]",
     "cu history <run_id> show <observation_id> [--json]",
-    "History is diagnosticOnly and cannot authorize act."
+    "History is diagnosticOnly and cannot authorize act.",
   ].join("\n"),
   status: [
     "cu status [run_id] [--json]",
-    "Report safe workspace and run summaries through a read-only inspection."
+    "Report safe workspace and run summaries through a read-only inspection.",
   ].join("\n"),
   clear: [
     "cu clear <run_id> <time_end> [--json]",
     "cu clear <run_id> <time_start> <time_end> [--json]",
-    "Two timestamps select start <= capturedAt < end using exact UTC RFC3339 values."
+    "Two timestamps select start <= capturedAt < end using exact UTC RFC3339 values.",
   ].join("\n"),
   clearall: [
     "cu clearall <run_id> [--json]",
-    "Remove the complete proved archive transactionally while preserving run.json."
-  ].join("\n")
+    "Remove the complete proved archive transactionally while preserving run.json.",
+  ].join("\n"),
 });
 const helpTopics = Object.freeze(Object.keys(helpEntries));
 
@@ -116,7 +123,7 @@ function writeJson(value: unknown): void {
 function writeHelp(topic?: string): void {
   if (topic === undefined) {
     process.stdout.write(
-      `cu commands: ${helpTopics.join(", ")}\nUse \"cu help <topic>\" for command syntax.\n`
+      `cu commands: ${helpTopics.join(", ")}\nUse "cu help <topic>" for command syntax.\n`,
     );
     return;
   }
@@ -129,19 +136,19 @@ function writeHumanDisplays(result: DisplayInventory): void {
     ...result.displays.map((display) => {
       const bounds = display.boundsPx;
       return `${display.displayId}${display.primary ? " primary" : ""} pixel:${bounds.x},${bounds.y},${bounds.width},${bounds.height}`;
-    })
+    }),
   ];
   process.stdout.write(`${lines.join("\n")}\n`);
 }
 
 function writeHumanWorkspaceStatus(
   initialized: boolean,
-  runs: readonly WorkspaceRunSummary[]
+  runs: readonly WorkspaceRunSummary[],
 ): void {
   const lines = [
     `workspace: ${initialized ? "initialized" : "uninitialized"}`,
     `runs: ${runs.length}`,
-    ...runs.map((run) => `${run.id}: ${run.lifecycle} (${run.profile})`)
+    ...runs.map((run) => `${run.id}: ${run.lifecycle} (${run.profile})`),
   ];
   process.stdout.write(`${lines.join("\n")}\n`);
 }
@@ -149,7 +156,7 @@ function writeHumanWorkspaceStatus(
 function writeHumanRunStatus(initialized: boolean, run: RunStatusResult): void {
   const lines = [
     `workspace: ${initialized ? "initialized" : "uninitialized"}`,
-    `run: ${run.id}`
+    `run: ${run.id}`,
   ];
   if (!run.exists) {
     lines.push("state: unavailable");
@@ -167,17 +174,26 @@ function writeHumanRunStatus(initialized: boolean, run: RunStatusResult): void {
     `historical bundle limit: ${archive?.maxHistoricalBundles ?? "unknown"}`,
     `current observation: ${run.currentObservation?.state ?? "unknown"}`,
     `effect: ${run.effect?.state ?? "unknown"}`,
-    `unavailable history events: ${run.history?.unavailableEventCount ?? "unknown"}`
+    `unavailable history events: ${run.history?.unavailableEventCount ?? "unknown"}`,
   );
   process.stdout.write(`${lines.join("\n")}\n`);
 }
 
-function writeError(json: boolean, code: string, message: string): void {
+function writeError(
+  json: boolean,
+  code: string,
+  message: string,
+  retryable = isRetryableErrorCode(code),
+): void {
   if (json) {
-    writeJson({ kind: "cu.error/v1", code, message, retryable: false });
+    writeJson({ kind: "cu.error/v1", code, message, retryable });
   } else {
     process.stderr.write(`${message}\n`);
   }
+}
+
+function isRetryableErrorCode(code: string): boolean {
+  return code === "observation_expired" || code === "observation_consumed";
 }
 
 type Invocation = {
@@ -198,7 +214,11 @@ function parseInvocation(args: readonly string[]): Invocation | undefined {
     return undefined;
   }
 
-  return { command: operands[0], json: json.length === 1, operands: operands.slice(1) };
+  return {
+    command: operands[0],
+    json: json.length === 1,
+    operands: operands.slice(1),
+  };
 }
 
 type ActInvocation = Readonly<{
@@ -207,7 +227,9 @@ type ActInvocation = Readonly<{
   json: boolean;
 }>;
 
-function parseActInvocation(args: readonly string[]): ActInvocation | undefined {
+function parseActInvocation(
+  args: readonly string[],
+): ActInvocation | undefined {
   let runId: string | undefined;
   let actionFile: string | undefined;
   let json = false;
@@ -221,14 +243,22 @@ function parseActInvocation(args: readonly string[]): ActInvocation | undefined 
     }
     if (argument === "--action-file") {
       const value = args[index + 1];
-      if (actionFile !== undefined || value === undefined || value.startsWith("--")) {
+      if (
+        actionFile !== undefined ||
+        value === undefined ||
+        value.startsWith("--")
+      ) {
         return undefined;
       }
       actionFile = value;
       index += 1;
       continue;
     }
-    if (argument.startsWith("--") || runId !== undefined || !isRunId(argument)) {
+    if (
+      argument.startsWith("--") ||
+      runId !== undefined ||
+      !isRunId(argument)
+    ) {
       return undefined;
     }
     runId = argument;
@@ -242,7 +272,7 @@ function parseActInvocation(args: readonly string[]): ActInvocation | undefined 
 export function createPublicActReceipt(
   runId: string,
   plan: NormalizedActionPlan,
-  result: ActRegionResult
+  result: ActRegionResult,
 ): Readonly<Record<string, unknown>> {
   const root = {
     kind: "cu.act.result/v1",
@@ -250,18 +280,19 @@ export function createPublicActReceipt(
     outcome: result.outcome,
     emittedActionCount: result.emittedActionCount,
     emittedLeafActionCount: result.emittedLeafActionCount,
-    unexecutedActionCount: plan.actions.length - result.emittedActionCount
+    unexecutedActionCount: plan.actions.length - result.emittedActionCount,
   };
   return Object.freeze(
     result.outcome === "checkpoint"
       ? { ...root, checkpoint: result.checkpoint }
-      : root
+      : root,
   );
 }
 
 export type PublicActFailure = Readonly<{
   code: string;
   message: string;
+  retryable: boolean;
   exitCode: 1 | 2 | 3 | 4 | 5;
 }>;
 
@@ -276,7 +307,8 @@ const publicActMessages: Readonly<Record<string, string>> = Object.freeze({
   effect_journal_unresolved: "An unresolved effect blocks this action.",
   input_unavailable: "Native input is unavailable in this environment.",
   observation_environment_changed: "Observation environment has changed.",
-  observation_expired: "Observation has expired.",
+  observation_expired:
+    "Observation has expired; capture a new observation and retry.",
   observation_invalid: "Observation state is invalid.",
   observation_unavailable: "No matching actionable observation is available.",
   run_busy: "Run is busy.",
@@ -286,7 +318,7 @@ const publicActMessages: Readonly<Record<string, string>> = Object.freeze({
   checkpoint_publish_failed: "Checkpoint publication failed after input.",
   cleanup_unproven: "Native input cleanup could not be proven.",
   helper_lost: "Native input helper completion could not be proven.",
-  internal_error: "Act failed safely."
+  internal_error: "Act failed safely.",
 });
 
 export function classifyPublicActFailure(error: unknown): PublicActFailure {
@@ -310,20 +342,53 @@ export function classifyPublicActFailure(error: unknown): PublicActFailure {
   return Object.freeze({
     code,
     message: publicActMessages[code] ?? publicActMessages.internal_error!,
-    exitCode
+    retryable: isRetryableErrorCode(code),
+    exitCode,
   });
 }
 
 type ObserveInvocation = Readonly<{
   runId: string;
   selector?: CaptureSelector;
+  ttlMs?: ObservationTtlMs;
   json: boolean;
 }>;
 
-function parseObserveInvocation(args: readonly string[]): ObserveInvocation | undefined {
+function parseObservationTtl(value: string): ObservationTtlMs | undefined {
+  if (value === "unlimited") {
+    return null;
+  }
+  if (!/^[1-9][0-9]*$/.test(value)) {
+    return undefined;
+  }
+  const seconds = Number(value);
+  if (!Number.isSafeInteger(seconds) || seconds > MAX_OBSERVATION_TTL_SECONDS) {
+    return undefined;
+  }
+  return seconds * 1_000;
+}
+
+function parseDisplayIdList(value: string): readonly string[] | undefined {
+  const displayIds = value.split(",");
+  if (
+    displayIds.length < 1 ||
+    displayIds.length > 32 ||
+    displayIds.some((displayId) => !isDisplayId(displayId)) ||
+    new Set(displayIds).size !== displayIds.length
+  ) {
+    return undefined;
+  }
+  return Object.freeze(displayIds);
+}
+
+function parseObserveInvocation(
+  args: readonly string[],
+): ObserveInvocation | undefined {
   let runId: string | undefined;
   let selector: RegionSelector | undefined;
   let displayId: string | undefined;
+  let fullScreenDisplayIds: readonly string[] | undefined;
+  let ttlMs: ObservationTtlMs | undefined;
   let json = false;
 
   for (let index = 0; index < args.length; index += 1) {
@@ -333,9 +398,30 @@ function parseObserveInvocation(args: readonly string[]): ObserveInvocation | un
       json = true;
       continue;
     }
+    if (argument === "--full-screen") {
+      const value = args[index + 1];
+      if (
+        fullScreenDisplayIds !== undefined ||
+        value === undefined ||
+        value.startsWith("--")
+      ) {
+        return undefined;
+      }
+      const parsed = parseDisplayIdList(value);
+      if (parsed === undefined) {
+        return undefined;
+      }
+      fullScreenDisplayIds = parsed;
+      index += 1;
+      continue;
+    }
     if (argument === "--region") {
       const value = args[index + 1];
-      if (selector !== undefined || value === undefined || value.startsWith("--")) {
+      if (
+        selector !== undefined ||
+        value === undefined ||
+        value.startsWith("--")
+      ) {
         return undefined;
       }
       try {
@@ -343,6 +429,23 @@ function parseObserveInvocation(args: readonly string[]): ObserveInvocation | un
       } catch {
         return undefined;
       }
+      index += 1;
+      continue;
+    }
+    if (argument === "--ttl") {
+      const value = args[index + 1];
+      if (
+        ttlMs !== undefined ||
+        value === undefined ||
+        value.startsWith("--")
+      ) {
+        return undefined;
+      }
+      const parsed = parseObservationTtl(value);
+      if (parsed === undefined) {
+        return undefined;
+      }
+      ttlMs = parsed;
       index += 1;
       continue;
     }
@@ -360,21 +463,43 @@ function parseObserveInvocation(args: readonly string[]): ObserveInvocation | un
       index += 1;
       continue;
     }
-    if (argument.startsWith("--") || runId !== undefined || !isRunId(argument)) {
+    if (
+      argument.startsWith("--") ||
+      runId !== undefined ||
+      !isRunId(argument)
+    ) {
       return undefined;
     }
     runId = argument;
   }
 
-  if (runId === undefined || (displayId !== undefined && selector === undefined)) {
+  if (
+    runId === undefined ||
+    (displayId !== undefined && selector === undefined)
+  ) {
     return undefined;
   }
-  const captureSelector = selector === undefined
-    ? undefined
-    : displayId === undefined
-      ? selector
-      : bindRegionSelectorToDisplay(displayId, selector);
-  return Object.freeze({ runId, selector: captureSelector, json });
+  if (
+    fullScreenDisplayIds !== undefined &&
+    (selector !== undefined || displayId !== undefined)
+  ) {
+    return undefined;
+  }
+  if (fullScreenDisplayIds !== undefined) {
+    return Object.freeze({
+      runId,
+      selector: bindFullScreenSelectorToDisplays(fullScreenDisplayIds),
+      ttlMs,
+      json,
+    });
+  }
+  const captureSelector =
+    selector === undefined
+      ? undefined
+      : displayId === undefined
+        ? selector
+        : bindRegionSelectorToDisplay(displayId, selector);
+  return Object.freeze({ runId, selector: captureSelector, ttlMs, json });
 }
 
 type HistoryInvocation = Readonly<{
@@ -394,7 +519,7 @@ type ClearInvocation = Readonly<{
 class PublicCommandError extends Error {
   constructor(
     readonly code: string,
-    readonly exitCode: 1 | 3
+    readonly exitCode: 1 | 3,
   ) {
     super("");
   }
@@ -405,18 +530,25 @@ const publicCommandMessages: Readonly<Record<string, string>> = Object.freeze({
   archive_recovery_required: "Observation archive requires recovery.",
   effect_journal_invalid: "Effect journal state is invalid.",
   effect_journal_unresolved: "An unresolved effect blocks this command.",
+  observation_consumed:
+    "Current observation has been consumed; capture a new observation before cleanup.",
   run_busy: "Run is busy.",
   run_invalid: "Run state cannot be inspected safely.",
-  workspace_invalid: "Workspace state cannot be used safely."
+  workspace_invalid: "Workspace state cannot be used safely.",
 });
 
 function commandFailure(json: boolean, code: string, exitCode: 1 | 3): number {
-  writeError(json, code, publicCommandMessages[code] ?? publicCommandMessages.archive_invalid!);
+  writeError(
+    json,
+    code,
+    publicCommandMessages[code] ?? publicCommandMessages.archive_invalid!,
+  );
   return exitCode;
 }
 
-function parseJsonOperands(args: readonly string[]):
-  { json: boolean; operands: readonly string[] } | undefined {
+function parseJsonOperands(
+  args: readonly string[],
+): { json: boolean; operands: readonly string[] } | undefined {
   let json = false;
   const operands: string[] = [];
   for (const argument of args) {
@@ -431,9 +563,15 @@ function parseJsonOperands(args: readonly string[]):
   return Object.freeze({ json, operands: Object.freeze(operands) });
 }
 
-function parseHistoryInvocation(args: readonly string[]): HistoryInvocation | undefined {
+function parseHistoryInvocation(
+  args: readonly string[],
+): HistoryInvocation | undefined {
   const parsed = parseJsonOperands(args);
-  if (parsed === undefined || parsed.operands.length < 1 || parsed.operands.length > 3) {
+  if (
+    parsed === undefined ||
+    parsed.operands.length < 1 ||
+    parsed.operands.length > 3
+  ) {
     return undefined;
   }
   const [runId, subcommand, observationId] = parsed.operands;
@@ -452,7 +590,12 @@ function parseHistoryInvocation(args: readonly string[]): HistoryInvocation | un
   ) {
     return undefined;
   }
-  return Object.freeze({ runId: runId!, mode: "show", observationId, json: parsed.json });
+  return Object.freeze({
+    runId: runId!,
+    mode: "show",
+    observationId,
+    json: parsed.json,
+  });
 }
 
 function canonicalTimestamp(value: string): boolean {
@@ -468,7 +611,7 @@ function canonicalTimestamp(value: string): boolean {
 
 function parseClearInvocation(
   args: readonly string[],
-  clearAll: boolean
+  clearAll: boolean,
 ): ClearInvocation | undefined {
   const parsed = parseJsonOperands(args);
   if (parsed === undefined) return undefined;
@@ -478,18 +621,20 @@ function parseClearInvocation(
           runId: parsed.operands[0]!,
           timeStart: null,
           timeEnd: "",
-          json: parsed.json
+          json: parsed.json,
         })
       : undefined;
   }
-  if (parsed.operands.length !== 2 && parsed.operands.length !== 3) return undefined;
+  if (parsed.operands.length !== 2 && parsed.operands.length !== 3)
+    return undefined;
   const runId = parsed.operands[0]!;
   const timeStart = parsed.operands.length === 3 ? parsed.operands[1]! : null;
   const timeEnd = parsed.operands[parsed.operands.length - 1]!;
   if (
     !isRunId(runId) ||
     !canonicalTimestamp(timeEnd) ||
-    (timeStart !== null && (!canonicalTimestamp(timeStart) || timeStart >= timeEnd))
+    (timeStart !== null &&
+      (!canonicalTimestamp(timeStart) || timeStart >= timeEnd))
   ) {
     return undefined;
   }
@@ -525,29 +670,40 @@ function inspectAdmittedCommandRun(root: string, runId: string): void {
 
 function clearStatusFailure(
   status: Awaited<ReturnType<typeof inspectRunStatus>>,
-  ignoreBusy: boolean
+  ignoreBusy: boolean,
 ): PublicCommandError | undefined {
   if (status.busy && !ignoreBusy) {
     return new PublicCommandError("run_busy", 3);
   }
-  if (status.archive?.state === "recovery_required" || status.effect?.state === "unknown") {
+  if (
+    status.archive?.state === "recovery_required" ||
+    status.effect?.state === "unknown"
+  ) {
     return new PublicCommandError("archive_recovery_required", 3);
   }
   if (
     status.effect?.state === "intent" ||
     status.effect?.state === "partial" ||
-    status.effect?.state === "indeterminate" ||
-    status.currentObservation?.state === "consumed"
+    status.effect?.state === "indeterminate"
   ) {
     return new PublicCommandError("effect_journal_unresolved", 3);
+  }
+  if (status.currentObservation?.state === "consumed") {
+    return new PublicCommandError("observation_consumed", 3);
   }
   return undefined;
 }
 
-async function inspectClearPreflight(root: string, runId: string): Promise<void> {
+async function inspectClearPreflight(
+  root: string,
+  runId: string,
+): Promise<void> {
   inspectAdmittedCommandRun(root, runId);
   try {
-    const failure = clearStatusFailure(await inspectRunStatus(root, runId), true);
+    const failure = clearStatusFailure(
+      await inspectRunStatus(root, runId),
+      true,
+    );
     if (failure !== undefined) throw failure;
   } catch (error) {
     if (error instanceof PublicCommandError) throw error;
@@ -558,7 +714,7 @@ async function inspectClearPreflight(root: string, runId: string): Promise<void>
 async function classifyCleanupError(
   error: unknown,
   root: string,
-  runId: string
+  runId: string,
 ): Promise<PublicCommandError> {
   if (error instanceof PublicCommandError) return error;
   if (error instanceof ArchiveCleanupPublicationUncertainError) {
@@ -566,7 +722,10 @@ async function classifyCleanupError(
   }
   if (error instanceof ArchiveCleanupError) {
     try {
-      const statusFailure = clearStatusFailure(await inspectRunStatus(root, runId), true);
+      const statusFailure = clearStatusFailure(
+        await inspectRunStatus(root, runId),
+        true,
+      );
       if (statusFailure !== undefined) return statusFailure;
     } catch (queryError) {
       return mapArchiveQueryError(queryError);
@@ -577,7 +736,7 @@ async function classifyCleanupError(
 
 async function executeClear(
   root: string,
-  invocation: ClearInvocation
+  invocation: ClearInvocation,
 ): Promise<Readonly<Record<string, unknown>>> {
   inspectAdmittedCommandRun(root, invocation.runId);
   let lock;
@@ -593,14 +752,19 @@ async function executeClear(
   let operationFailure: PublicCommandError | undefined;
   try {
     await inspectClearPreflight(root, invocation.runId);
-    result = invocation.timeEnd === ""
-      ? await clearAllObservations(lock, root, invocation.runId)
-      : await clearRangeObservations(lock, root, invocation.runId, {
-          timeStart: invocation.timeStart ?? undefined,
-          timeEnd: invocation.timeEnd
-        });
+    result =
+      invocation.timeEnd === ""
+        ? await clearAllObservations(lock, root, invocation.runId)
+        : await clearRangeObservations(lock, root, invocation.runId, {
+            timeStart: invocation.timeStart ?? undefined,
+            timeEnd: invocation.timeEnd,
+          });
   } catch (error) {
-    operationFailure = await classifyCleanupError(error, root, invocation.runId);
+    operationFailure = await classifyCleanupError(
+      error,
+      root,
+      invocation.runId,
+    );
   }
   try {
     lock.release();
@@ -626,14 +790,16 @@ async function main(args: readonly string[]): Promise<number> {
       if (act.json) {
         writeJson(receipt);
       } else if (result.outcome === "checkpoint") {
-        process.stdout.write(`checkpoint ${result.checkpoint.observationId}\n${result.checkpoint.imagePath}\n`);
+        process.stdout.write(
+          `checkpoint ${result.checkpoint.observationId}\n${result.checkpoint.imagePath}\n`,
+        );
       } else {
         process.stdout.write(`completed ${result.emittedActionCount}\n`);
       }
       return 0;
     } catch (error) {
       const failure = classifyPublicActFailure(error);
-      writeError(act.json, failure.code, failure.message);
+      writeError(act.json, failure.code, failure.message, failure.retryable);
       return failure.exitCode;
     }
   }
@@ -651,12 +817,18 @@ async function main(args: readonly string[]): Promise<number> {
         if (history.json) {
           writeJson(result);
         } else {
-          process.stdout.write(result.items.map((item) =>
-            `${item.observationId} ${item.availability}`
-          ).join("\n") + (result.items.length === 0 ? "" : "\n"));
+          process.stdout.write(
+            result.items
+              .map((item) => `${item.observationId} ${item.availability}`)
+              .join("\n") + (result.items.length === 0 ? "" : "\n"),
+          );
         }
       } else {
-        const result = await showRunHistory(process.cwd(), history.runId, history.observationId!);
+        const result = await showRunHistory(
+          process.cwd(),
+          history.runId,
+          history.observationId!,
+        );
         if (history.json) {
           writeJson(result);
         } else {
@@ -668,9 +840,10 @@ async function main(args: readonly string[]): Promise<number> {
       }
       return 0;
     } catch (error) {
-      const failure = error instanceof PublicCommandError
-        ? error
-        : mapArchiveQueryError(error);
+      const failure =
+        error instanceof PublicCommandError
+          ? error
+          : mapArchiveQueryError(error);
       return commandFailure(history.json, failure.code, failure.exitCode);
     }
   }
@@ -692,9 +865,10 @@ async function main(args: readonly string[]): Promise<number> {
       }
       return 0;
     } catch (error) {
-      const failure = error instanceof PublicCommandError
-        ? error
-        : new PublicCommandError("archive_recovery_required", 3);
+      const failure =
+        error instanceof PublicCommandError
+          ? error
+          : new PublicCommandError("archive_recovery_required", 3);
       return commandFailure(clear.json, failure.code, failure.exitCode);
     }
   }
@@ -709,33 +883,58 @@ async function main(args: readonly string[]): Promise<number> {
       writeError(
         observe.json,
         "blocked_environment",
-        "Full-desktop capture is unavailable in this environment."
+        "Full-desktop capture is unavailable in this environment.",
       );
       return 3;
     }
     try {
-      const result = await observeRegion(process.cwd(), observe.runId, observe.selector);
+      const result = await observeRegion(
+        process.cwd(),
+        observe.runId,
+        observe.selector,
+        {
+          ttlMs: observe.ttlMs,
+        },
+      );
       if (observe.json) {
         writeJson(result);
       } else {
-        process.stdout.write(`observation ${result.observationId}\n${result.imagePath}\n`);
+        process.stdout.write(
+          `observation ${result.observationId}\n${result.imagePath}\n`,
+        );
       }
       return 0;
     } catch (error) {
       if (error instanceof ObserveCaptureError) {
-        writeError(observe.json, "capture_invalid", "Capture could not be validated safely.");
+        writeError(
+          observe.json,
+          "capture_invalid",
+          "Capture could not be validated safely.",
+        );
         return 3;
       }
       if (error instanceof ObserveQuotaError) {
-        writeError(observe.json, "capture_quota_exceeded", "Capture quota cannot be satisfied safely.");
+        writeError(
+          observe.json,
+          "capture_quota_exceeded",
+          "Capture quota cannot be satisfied safely.",
+        );
         return 3;
       }
       if (error instanceof ObserveArchiveError) {
-        writeError(observe.json, "archive_recovery_required", "Observation archive requires recovery.");
+        writeError(
+          observe.json,
+          "archive_recovery_required",
+          "Observation archive requires recovery.",
+        );
         return 3;
       }
       if (error instanceof ObserveWorkspaceError) {
-        writeError(observe.json, "workspace_invalid", "Workspace state cannot be used safely.");
+        writeError(
+          observe.json,
+          "workspace_invalid",
+          "Workspace state cannot be used safely.",
+        );
         return 1;
       }
       writeError(observe.json, "internal_error", "Observe failed safely.");
@@ -752,14 +951,18 @@ async function main(args: readonly string[]): Promise<number> {
   if (invocation.command === "help" && invocation.operands.length <= 1) {
     const topic = invocation.operands[0];
     if (topic !== undefined && !Object.hasOwn(helpEntries, topic)) {
-      writeError(invocation.json, "usage_invalid", "Invalid command invocation.");
+      writeError(
+        invocation.json,
+        "usage_invalid",
+        "Invalid command invocation.",
+      );
       return 2;
     }
     if (invocation.json) {
       writeJson(
         topic === undefined
           ? { kind: "cu.help.result/v1", topics: helpTopics }
-          : { kind: "cu.help.result/v1", topic, text: helpEntries[topic] }
+          : { kind: "cu.help.result/v1", topic, text: helpEntries[topic] },
       );
     } else {
       writeHelp(topic);
@@ -778,10 +981,18 @@ async function main(args: readonly string[]): Promise<number> {
       return 0;
     } catch (error) {
       if (error instanceof WindowsDisplayError) {
-        writeError(invocation.json, "display_unavailable", "Display topology is unavailable in this environment.");
+        writeError(
+          invocation.json,
+          "display_unavailable",
+          "Display topology is unavailable in this environment.",
+        );
         return 3;
       }
-      writeError(invocation.json, "internal_error", "Display query failed safely.");
+      writeError(
+        invocation.json,
+        "internal_error",
+        "Display query failed safely.",
+      );
       return 1;
     }
   }
@@ -792,11 +1003,19 @@ async function main(args: readonly string[]): Promise<number> {
       if (invocation.json) {
         writeJson({ kind: "cu.init.result/v1", created });
       } else {
-        process.stdout.write(created ? "workspace initialized\n" : "workspace already initialized\n");
+        process.stdout.write(
+          created
+            ? "workspace initialized\n"
+            : "workspace already initialized\n",
+        );
       }
       return 0;
     } catch {
-      writeError(invocation.json, "workspace_invalid", "Workspace state cannot be initialized safely.");
+      writeError(
+        invocation.json,
+        "workspace_invalid",
+        "Workspace state cannot be initialized safely.",
+      );
       return 1;
     }
   }
@@ -804,7 +1023,11 @@ async function main(args: readonly string[]): Promise<number> {
   if (invocation.command === "status" && invocation.operands.length <= 1) {
     const runId = invocation.operands[0];
     if (runId !== undefined && !isRunId(runId)) {
-      writeError(invocation.json, "usage_invalid", "Invalid command invocation.");
+      writeError(
+        invocation.json,
+        "usage_invalid",
+        "Invalid command invocation.",
+      );
       return 2;
     }
 
@@ -815,7 +1038,11 @@ async function main(args: readonly string[]): Promise<number> {
           writeJson(
             runId === undefined
               ? { kind: "cu.status.result/v1", workspace, runs: [] }
-              : { kind: "cu.status.result/v1", workspace, run: { id: runId, exists: false } }
+              : {
+                  kind: "cu.status.result/v1",
+                  workspace,
+                  run: { id: runId, exists: false },
+                },
           );
         } else if (runId === undefined) {
           writeHumanWorkspaceStatus(false, []);
@@ -836,7 +1063,11 @@ async function main(args: readonly string[]): Promise<number> {
       const run = inspectRun(process.cwd(), runId);
       if (run === undefined) {
         if (invocation.json) {
-          writeJson({ kind: "cu.status.result/v1", workspace, run: { id: runId, exists: false } });
+          writeJson({
+            kind: "cu.status.result/v1",
+            workspace,
+            run: { id: runId, exists: false },
+          });
         } else {
           writeHumanRunStatus(true, { id: runId, exists: false });
         }
@@ -859,7 +1090,11 @@ async function main(args: readonly string[]): Promise<number> {
       if (error instanceof ArchiveQueryError) {
         return commandFailure(invocation.json, "archive_invalid", 1);
       }
-      writeError(invocation.json, "workspace_invalid", "Workspace state cannot be inspected safely.");
+      writeError(
+        invocation.json,
+        "workspace_invalid",
+        "Workspace state cannot be inspected safely.",
+      );
       return 1;
     }
   }
@@ -883,14 +1118,21 @@ function sameCommandPath(left: string, right: string): boolean {
 }
 
 const invokedPath = process.argv[1];
-if (invokedPath !== undefined && sameCommandPath(invokedPath, fileURLToPath(import.meta.url))) {
+if (
+  invokedPath !== undefined &&
+  sameCommandPath(invokedPath, fileURLToPath(import.meta.url))
+) {
   void main(process.argv.slice(2)).then(
     (code) => {
       process.exitCode = code;
     },
     () => {
-      writeError(process.argv.includes("--json"), "internal_error", "Command failed safely.");
+      writeError(
+        process.argv.includes("--json"),
+        "internal_error",
+        "Command failed safely.",
+      );
       process.exitCode = 1;
-    }
+    },
   );
 }
