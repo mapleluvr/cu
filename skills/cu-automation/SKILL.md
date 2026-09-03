@@ -40,12 +40,20 @@ cu init --json
 ```
 
 ### Step 2: Observe Target Region
-`cu` requires an explicit region selector. Unrestricted full-desktop capture is blocked in preview.
-Syntax: `--region pixel:<left>,<top>,<width>,<height>` (L, T, W, H):
+`cu` requires an explicit capture selector — either a region or one or more whole displays. There is no implicit current-desktop target.
+
+Region capture syntax: `--region pixel:<left>,<top>,<width>,<height>` (L, T, W, H):
 ```powershell
 cu observe work-1 --region pixel:100,100,1200,800 --json
 ```
-*(Optional: Run `cu displays --json` only if multi-monitor topology inspection or `--display <display_id>` binding is required).*
+
+Full-screen capture syntax: `--full-screen <display_id[,display_id...]>`, mutually exclusive with `--region`/`--display`. Copy the display IDs verbatim from `cu displays --json` (comma-separated for multiple screens, e.g. `dsp_0123456789abcdef0123456789abcdef`):
+```powershell
+cu displays --json
+cu observe work-1 --full-screen dsp_0123456789abcdef0123456789abcdef --json
+```
+
+*(Optional: Run `cu displays --json` for multi-monitor topology inspection or `--display <display_id>` region binding).*
 
 Receipt:
 ```json
@@ -59,7 +67,11 @@ Receipt:
   "actionable": true
 }
 ```
-*Note*: Observations expire after 300 seconds by default. Act promptly, or re-run `observe` if expired.
+*Note*: Observations expire after 300 seconds by default (`expiresAt`). To change the lifetime, pass `--ttl <positive-whole-seconds|unlimited>` (minimum `1`; `unlimited` records `expiresAt: null`, so the observation never expires by time):
+```powershell
+cu observe work-1 --region pixel:100,100,1200,800 --ttl 60 --json
+```
+A checkpoint observation inherits the TTL of the observation it replaced. Act within the window, or re-run `observe` if expired — `observation_expired` receipts carry `retryable: true`, and retrying with a fresh observation is the intended recovery.
 
 ### Step 3: Inspect the Screenshot & Locate Coordinates
 Inspect `imagePath` using your image inspection tool. Calculate target coordinates directly from this image:
@@ -103,7 +115,7 @@ Read the JSON result:
     }
   }
   ```
-  **Use `checkpoint.observationId` and inspect `checkpoint.imagePath` for your next plan.** Do not replay the old plan.
+  **Use `checkpoint.observationId` and inspect `checkpoint.imagePath` for your next plan.** Do not replay the old plan. The checkpoint observation inherits the replaced observation's TTL and capture selection (region rectangle or full-screen set), so coordinates stay relative to `checkpoint.imagePath` in the same `0..999` space.
 
 ---
 
