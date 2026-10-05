@@ -1,25 +1,26 @@
-<h1 align="center">cu</h1>
+![cu](assets/cu-title.png)
 
-<p align="center"><strong>Evidence-bound Computer Use from the Windows command line.</strong></p>
+<div align="center">
 
-<p align="center">
-  <img alt="Platform: Windows" src="https://img.shields.io/badge/platform-Windows-0078D4">
-  <img alt="Node.js: 22.19 or newer" src="https://img.shields.io/badge/Node.js-%3E%3D22.19-339933">
-  <img alt="Status: preview" src="https://img.shields.io/badge/status-preview-F59E0B">
-  <img alt="License: MIT" src="https://img.shields.io/badge/license-MIT-2F855A">
-</p>
+*Evidence-bound Computer Use from the Windows command line.*
 
-<p align="center">
-  <a href="#getting-started"><strong>Getting Started</strong></a>
-  &middot;
-  <a href="#key-features"><strong>Features</strong></a>
-  &middot;
-  <a href="#command-line"><strong>CLI</strong></a>
-  &middot;
-  <a href="#safety-model"><strong>Safety</strong></a>
-  &middot;
-  <a href="docs/README.md"><strong>Documentation</strong></a>
-</p>
+<img src="https://img.shields.io/badge/version-1.0.0--preview.1-EB0404?labelColor=181818" alt="Version: 1.0.0-preview.1">
+<img src="https://img.shields.io/badge/platform-Windows-181818" alt="platform: Windows">
+<a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-FDFDFD?labelColor=181818" alt="License: MIT"></a>
+
+<br>
+<br>
+
+<a href="#quick-start">Quick Start</a> ｜
+<a href="#core-idea">Core Idea</a> ｜
+<a href="#key-features">Features</a> ｜
+<a href="#command-line">CLI</a> ｜
+<a href="#preview-limitations">Limits</a> ｜
+<a href="#documentation">Docs</a>
+
+</div>
+
+---
 
 `cu` captures validated Windows desktop regions, executes finite pointer and keyboard
 plans against the latest observation, and records enough durable evidence to distinguish
@@ -37,34 +38,15 @@ operation, and closes its helper resources before returning. Stateless `displays
 > is controlled-region observation and bounded input; unrestricted full-desktop
 > observation remains blocked until isolated synthetic-desktop verification is complete.
 
-```powershell
-cu init --json
-cu displays --json
-cu observe work-a --region pixel:100,100,800,600 --json
-cu status work-a
-cu help action-file
-```
+## Core Idea
 
-The `observe` receipt supplies the `observationId` for the next action file. Coordinates
-inside an action file use the normalized `0..999` top-left coordinate space of that
-observation:
+Keep observation authority, input delivery, and application outcomes separate.
 
-```json
-{
-  "kind": "cu.action/v1",
-  "observationId": "obs_0123456789abcdef0123456789abcdef",
-  "coordinateSpace": "normalized_999_top_left",
-  "actions": [
-    { "kind": "click", "at": { "x": 500, "y": 500 } }
-  ]
-}
-```
-
-Replace the example observation ID with the value returned by `observe`, then run:
-
-```powershell
-cu act work-a --action-file action.json --json
-```
+| Question | Evidence to inspect |
+| --- | --- |
+| Are these coordinates still authorized? | The latest actionable observation and revalidated display topology |
+| Was native input emitted? | The effect journal and action receipt, including partial or indeterminate outcomes |
+| Did the application achieve the goal? | A fresh observation of application state; input emission alone is not proof |
 
 ## Key Features
 
@@ -87,7 +69,9 @@ cu act work-a --action-file action.json --json
 - **Stable machine output**: versioned JSON receipts, sanitized error envelopes, and
   fixed exit-code meanings for shell automation.
 
-## Requirements
+## Quick Start
+
+### Requirements
 
 - Windows with an interactive default desktop
 - Node.js `22.19.0` or newer
@@ -97,7 +81,7 @@ cu act work-a --action-file action.json --json
 Locked, secure, unavailable, or elevation-bypass desktops fail closed. `cu` does not
 attempt to work around those boundaries.
 
-## Installation
+### Installation
 
 The current public build is a GitHub prerelease and is not published to the npm
 registry. Download the exact release artifact and checksum with the GitHub CLI:
@@ -129,7 +113,7 @@ cu help
 The prerelease supports controlled regional observation and bounded input. Unrestricted
 full-desktop observation remains blocked pending isolated Windows Sandbox/VM acceptance.
 
-## Getting Started
+### Getting Started
 
 Create a separate workspace so all state remains local to that directory:
 
@@ -172,6 +156,37 @@ When retained evidence is no longer needed:
 cu clearall work-a --json
 ```
 
+### Observation-bound action file
+
+```powershell
+cu init --json
+cu displays --json
+cu observe work-a --region pixel:100,100,800,600 --json
+cu status work-a
+cu help action-file
+```
+
+The `observe` receipt supplies the `observationId` for the next action file. Coordinates
+inside an action file use the normalized `0..999` top-left coordinate space of that
+observation:
+
+```json
+{
+  "kind": "cu.action/v1",
+  "observationId": "obs_0123456789abcdef0123456789abcdef",
+  "coordinateSpace": "normalized_999_top_left",
+  "actions": [
+    { "kind": "click", "at": { "x": 500, "y": 500 } }
+  ]
+}
+```
+
+Replace the example observation ID with the value returned by `observe`, then run:
+
+```powershell
+cu act work-a --action-file action.json --json
+```
+
 ## Command Line
 
 | Command | Purpose |
@@ -211,6 +226,21 @@ Receipts and durable diagnostics exclude raw typed text, private helper paths, r
 process identifiers, window handles, and application-level success claims. Native input
 emission never proves that an application completed a business operation.
 
+## Project Structure
+
+```text
+cu/
+├── src/             # CLI, observation, input, archive and effect state
+│   └── helper/      # Command-scoped Windows PowerShell helpers
+├── test/            # Unit, integration and controlled desktop tests
+├── scripts/         # Build assets and CI smoke checks
+├── skills/          # Agent-facing usage guidance
+├── docs/            # Design, contracts, verification and release notes
+└── assets/          # README title artwork
+```
+
+Runtime state belongs in a workspace-local `.cu/`, not in the source tree.
+
 ## Workspace State
 
 Each working directory owns its own `.cu/` namespace. Runs are not inherited by parent
@@ -230,6 +260,18 @@ or child directories.
 
 Some files are absent in steady state. Do not edit `.cu/` manually; use `status`,
 `history`, `clear`, and `clearall` so witness and transaction checks remain intact.
+
+## Preview Limitations
+
+- Unrestricted full-desktop observation is not yet release-accepted.
+- Stale or ownerless run locks are preserved and block rather than being reclaimed.
+- Process-interruption recovery is fail-closed; power-loss durability is not claimed.
+- A capable Windows host is still required for the final file-symlink confinement gate.
+- Display IDs identify topology-bound geometric placements, not physical monitor devices;
+  exact Windows Task View virtual-desktop selection is not supported.
+- Repository-wide non-live L3 and all four installed-command E2E suites completed for
+  this prerelease; those results do not substitute for the blocked environment gates
+  above.
 
 ## Documentation
 
@@ -274,18 +316,14 @@ Report suspected vulnerabilities privately according to [SECURITY.md](SECURITY.m
 Do not open a public issue containing captures, typed text, credentials, private `.cu/`
 state, helper paths, process IDs, or window handles.
 
-## Preview Limitations
-
-- Unrestricted full-desktop observation is not yet release-accepted.
-- Stale or ownerless run locks are preserved and block rather than being reclaimed.
-- Process-interruption recovery is fail-closed; power-loss durability is not claimed.
-- A capable Windows host is still required for the final file-symlink confinement gate.
-- Display IDs identify topology-bound geometric placements, not physical monitor devices;
-  exact Windows Task View virtual-desktop selection is not supported.
-- Repository-wide non-live L3 and all four installed-command E2E suites completed for
-  this prerelease; those results do not substitute for the blocked environment gates
-  above.
-
 ## License
 
 Licensed under the [MIT License](LICENSE).
+
+---
+
+<div align="center">
+
+**Observe first. Act within evidence. Never replay uncertainty.**
+
+</div>
