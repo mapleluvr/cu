@@ -32,6 +32,17 @@ for exact schemas, state transitions, and design decisions.
 - [Transactional Observation Archive and Effect Recovery](specification/v1/decisions/005-transactional-observation-archive.md)
 - [Witness-Validated Control-Record Replacement](specification/v1/decisions/006-witness-validated-control-record-replacement.md)
 
+## Research and Product Analysis
+
+These documents record dated findings and proposals, not normative contracts.
+
+- [Efficiency and Pi Image Delivery](research/efficiency-and-pi-image-delivery.md)
+- [Observe Latency Hill Climb](research/observe-latency-hillclimb.md)
+- [PowerShell 7 and DLL Observe Experiments](research/observe-powershell7-and-dll.md)
+- [Observe without PowerShell: Startup Comparison](research/observe-without-powershell.md)
+- [Native Capture Helper: Implementation and Measurements](research/observe-native-helper.md)
+- [Product Boundaries: agent-desktop and Codex](research/product-boundaries-agent-desktop-codex.md)
+
 ## Project Operations
 
 - [Contributing](../CONTRIBUTING.md)

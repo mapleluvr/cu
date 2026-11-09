@@ -24,6 +24,9 @@ Required tooling:
 - Node.js 22.19.0 or newer
 - Windows PowerShell 5.1
 - npm as supplied with the selected Node.js installation
+- A matching Windows C++ compiler: MinGW-w64 GCC, or CMake with Visual Studio C++
+  build tools. `CU_CXX` may select an explicit MinGW compiler for source builds.
+  Installed packages contain the compiled helper and require no compiler.
 
 Set up a checkout:
 
@@ -55,7 +58,8 @@ new parallel implementations.
 ## Testing
 
 The repository test aggregator is an active Windows integration suite, not a
-side-effect-free metadata check. It loads PowerShell helper paths and must run only in a
+side-effect-free metadata check. It executes the native capture helper and PowerShell
+input/reference helpers and must run only in a
 suitable Windows test environment:
 
 ```powershell

@@ -3,10 +3,11 @@ import mutableChildProcess, {
   type ChildProcessWithoutNullStreams,
   type SpawnOptions
 } from "node:child_process";
-import { readdirSync } from "node:fs";
+import { mkdtempSync, readdirSync, rmSync } from "node:fs";
 import { syncBuiltinESMExports } from "node:module";
 import { tmpdir } from "node:os";
-import test from "node:test";
+import { join } from "node:path";
+import test, { after, before } from "node:test";
 
 import {
   WindowsInputError,
@@ -33,6 +34,26 @@ type SpawnHook = (
 
 const spawnHooks = mutableChildProcess as unknown as { spawn: SpawnHook };
 const originalSpawn = mutableChildProcess.spawn;
+const originalTemp = process.env.TEMP;
+const originalTmp = process.env.TMP;
+let isolatedTempRoot: string | undefined;
+
+before(() => {
+  if (process.platform !== "win32") return;
+  // Other test files create and remove cu-input-* fixtures concurrently.
+  // Inspect only this test process's helper roots, not their system TEMP state.
+  isolatedTempRoot = mkdtempSync(join(tmpdir(), "cu-input-parent-tests-"));
+  process.env.TEMP = isolatedTempRoot;
+  process.env.TMP = isolatedTempRoot;
+});
+
+after(() => {
+  if (originalTemp === undefined) delete process.env.TEMP;
+  else process.env.TEMP = originalTemp;
+  if (originalTmp === undefined) delete process.env.TMP;
+  else process.env.TMP = originalTmp;
+  if (isolatedTempRoot !== undefined) rmSync(isolatedTempRoot, { recursive: true, force: true });
+});
 
 function inputTempRoots(): string[] {
   return readdirSync(tmpdir()).filter((name) => name.startsWith("cu-input-")).sort();

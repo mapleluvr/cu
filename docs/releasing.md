@@ -87,7 +87,7 @@ node dist/src/cli.js help --json
 
 Before making automated tests a required hosted check, add or identify a dedicated
 CI-safe test command whose environment and effects are explicit. The current `npm test`
-is an active Windows integration suite that loads PowerShell helper paths; it is not a
+is an active Windows integration suite that executes native and PowerShell helpers; it is not a
 side-effect-free metadata preflight and may require an interactive desktop. Run it on an
 authorized Windows integration host, not blindly on a generic hosted runner.
 
@@ -147,6 +147,8 @@ unscoped package name `cu` is already owned by another project. Before npm publi
       `dist/helper/`, `README.md`, `LICENSE`, and required package metadata.
 - [ ] Exclude tests, source TypeScript, local reviews, fixtures, `.cu/`, and `NUL`.
 - [ ] Remove `private: true` only in the reviewed npm-publishing change.
+- [ ] Build the native capture executable for each advertised architecture using a
+      matching MinGW-w64 or Visual Studio C++ toolchain; include its JSON library license.
 - [ ] Run `npm pack --dry-run --json` and inspect every proposed path.
 - [ ] Run `npm pack --json --pack-destination <temporary-directory>` to create the exact
       candidate `.tgz` outside the checkout, then inspect its file list and SHA-256.

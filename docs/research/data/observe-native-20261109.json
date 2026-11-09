@@ -1,0 +1,891 @@
+{
+  "date": "2026-11-09",
+  "note": "Only repository-owned fixture screenshots; complete CLI time; concurrent background/game load not controlled. Native C++ vs legacy Reflection.Emit PowerShell 5.1.",
+  "experiments": {
+    "cli-small.json": {
+      "note": "CLI child process wall time; fixture setup, init, independent PNG verification and cleanup excluded. Equal growing histories; AB/BA ordering; no input injected.",
+      "summary": {
+        "rounds": 20,
+        "region": {
+          "x": 49,
+          "y": 78,
+          "width": 400,
+          "height": 300
+        },
+        "candidateMedianMs": 634.5010999999995,
+        "candidateMinMs": 450.4938000000002,
+        "candidateMaxMs": 800.8502999999982,
+        "baselineMedianMs": 1097.004499999999,
+        "pairedMedianSavedMs": 479.7618000000002,
+        "pairsWon": 20,
+        "reduction": 0.4216057454641252
+      },
+      "samples": [
+        {
+          "pair": 0,
+          "variant": "baseline",
+          "totalMs": 1050.8962,
+          "imageBytes": 2175,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 0,
+          "variant": "candidate",
+          "totalMs": 450.4938000000002,
+          "imageBytes": 2175,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 1,
+          "variant": "candidate",
+          "totalMs": 457.12829999999985,
+          "imageBytes": 2175,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 1,
+          "variant": "baseline",
+          "totalMs": 951.6668,
+          "imageBytes": 2175,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 2,
+          "variant": "baseline",
+          "totalMs": 1002.815,
+          "imageBytes": 2175,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 2,
+          "variant": "candidate",
+          "totalMs": 491.97440000000006,
+          "imageBytes": 2175,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 3,
+          "variant": "candidate",
+          "totalMs": 539.4537,
+          "imageBytes": 2175,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 3,
+          "variant": "baseline",
+          "totalMs": 1013.8636000000006,
+          "imageBytes": 2175,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 4,
+          "variant": "baseline",
+          "totalMs": 1049.1443999999992,
+          "imageBytes": 2175,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 4,
+          "variant": "candidate",
+          "totalMs": 561.1220000000012,
+          "imageBytes": 2175,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 5,
+          "variant": "candidate",
+          "totalMs": 555.293099999999,
+          "imageBytes": 2175,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 5,
+          "variant": "baseline",
+          "totalMs": 1031.4884999999995,
+          "imageBytes": 2175,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 6,
+          "variant": "baseline",
+          "totalMs": 1053.6647999999986,
+          "imageBytes": 2175,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 6,
+          "variant": "candidate",
+          "totalMs": 551.0487999999987,
+          "imageBytes": 2175,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 7,
+          "variant": "candidate",
+          "totalMs": 592.9195,
+          "imageBytes": 2175,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 7,
+          "variant": "baseline",
+          "totalMs": 1096.0334000000003,
+          "imageBytes": 2175,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 8,
+          "variant": "baseline",
+          "totalMs": 1091.1772,
+          "imageBytes": 2175,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 8,
+          "variant": "candidate",
+          "totalMs": 607.8490000000002,
+          "imageBytes": 2175,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 9,
+          "variant": "candidate",
+          "totalMs": 626.4748,
+          "imageBytes": 2175,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 9,
+          "variant": "baseline",
+          "totalMs": 1072.1526999999987,
+          "imageBytes": 2175,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 10,
+          "variant": "baseline",
+          "totalMs": 1097.975599999998,
+          "imageBytes": 2175,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 10,
+          "variant": "candidate",
+          "totalMs": 664.2993000000024,
+          "imageBytes": 2175,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 11,
+          "variant": "candidate",
+          "totalMs": 642.527399999999,
+          "imageBytes": 2175,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 11,
+          "variant": "baseline",
+          "totalMs": 1127.7547999999988,
+          "imageBytes": 2175,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 12,
+          "variant": "baseline",
+          "totalMs": 1127.2885999999999,
+          "imageBytes": 2175,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 12,
+          "variant": "candidate",
+          "totalMs": 658.1382000000012,
+          "imageBytes": 2175,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 13,
+          "variant": "candidate",
+          "totalMs": 673.5034999999989,
+          "imageBytes": 2175,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 13,
+          "variant": "baseline",
+          "totalMs": 1132.4562000000005,
+          "imageBytes": 2175,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 14,
+          "variant": "baseline",
+          "totalMs": 1145.4271000000008,
+          "imageBytes": 2175,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 14,
+          "variant": "candidate",
+          "totalMs": 672.0434999999998,
+          "imageBytes": 2175,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 15,
+          "variant": "candidate",
+          "totalMs": 711.1033000000025,
+          "imageBytes": 2175,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 15,
+          "variant": "baseline",
+          "totalMs": 1219.4012000000002,
+          "imageBytes": 2175,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 16,
+          "variant": "baseline",
+          "totalMs": 1243.4700999999986,
+          "imageBytes": 2175,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 16,
+          "variant": "candidate",
+          "totalMs": 740.5472999999984,
+          "imageBytes": 2175,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 17,
+          "variant": "candidate",
+          "totalMs": 755.7019,
+          "imageBytes": 2175,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 17,
+          "variant": "baseline",
+          "totalMs": 1219.2816999999995,
+          "imageBytes": 2175,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 18,
+          "variant": "baseline",
+          "totalMs": 1244.5004999999983,
+          "imageBytes": 2175,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 18,
+          "variant": "candidate",
+          "totalMs": 800.8502999999982,
+          "imageBytes": 2175,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 19,
+          "variant": "candidate",
+          "totalMs": 798.7922000000035,
+          "imageBytes": 2175,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 19,
+          "variant": "baseline",
+          "totalMs": 1235.9090999999971,
+          "imageBytes": 2175,
+          "pixelsVerified": true
+        }
+      ]
+    },
+    "final-small.json": {
+      "note": "Complete CLI wall time. Fixture/init/pixel checks excluded. Rotating then reversed order. Fresh mode uses a new initialized workspace for every sample, records failures and continues the finite schedule without retry; growing-history mode stops on failure.",
+      "fresh": true,
+      "rounds": 20,
+      "names": [
+        "ps51",
+        "native"
+      ],
+      "samples": [
+        {
+          "pair": 0,
+          "name": "ps51",
+          "totalMs": 1008.0616000000001,
+          "status": 0,
+          "imageBytes": 2151,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 0,
+          "name": "native",
+          "totalMs": 468.6709999999998,
+          "status": 0,
+          "imageBytes": 2151,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 1,
+          "name": "native",
+          "totalMs": 509.31690000000026,
+          "status": 0,
+          "imageBytes": 2151,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 1,
+          "name": "ps51",
+          "totalMs": 996.6217999999999,
+          "status": 0,
+          "imageBytes": 2151,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 2,
+          "name": "native",
+          "totalMs": 495.01039999999966,
+          "status": 0,
+          "imageBytes": 2151,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 2,
+          "name": "ps51",
+          "totalMs": 1011.7428,
+          "status": 0,
+          "imageBytes": 2151,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 3,
+          "name": "ps51",
+          "totalMs": 1017.1054000000004,
+          "status": 0,
+          "imageBytes": 2151,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 3,
+          "name": "native",
+          "totalMs": 478.27999999999975,
+          "status": 0,
+          "imageBytes": 2151,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 4,
+          "name": "ps51",
+          "totalMs": 980.9737999999998,
+          "status": 0,
+          "imageBytes": 2151,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 4,
+          "name": "native",
+          "totalMs": 489.48309999999947,
+          "status": 0,
+          "imageBytes": 2151,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 5,
+          "name": "native",
+          "totalMs": 489.1402999999991,
+          "status": 0,
+          "imageBytes": 2151,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 5,
+          "name": "ps51",
+          "totalMs": 988.5144999999993,
+          "status": 0,
+          "imageBytes": 2151,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 6,
+          "name": "native",
+          "totalMs": 495.01860000000124,
+          "status": 0,
+          "imageBytes": 2151,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 6,
+          "name": "ps51",
+          "totalMs": 946.2088000000003,
+          "status": 0,
+          "imageBytes": 2151,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 7,
+          "name": "ps51",
+          "totalMs": 940.7579000000005,
+          "status": 0,
+          "imageBytes": 2151,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 7,
+          "name": "native",
+          "totalMs": 489.09369999999944,
+          "status": 0,
+          "imageBytes": 2151,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 8,
+          "name": "ps51",
+          "totalMs": 960.3341,
+          "status": 0,
+          "imageBytes": 2151,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 8,
+          "name": "native",
+          "totalMs": 480.7548000000006,
+          "status": 0,
+          "imageBytes": 2151,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 9,
+          "name": "native",
+          "totalMs": 502.8723000000009,
+          "status": 0,
+          "imageBytes": 2151,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 9,
+          "name": "ps51",
+          "totalMs": 950.4380000000001,
+          "status": 0,
+          "imageBytes": 2151,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 10,
+          "name": "native",
+          "totalMs": 478.2536999999993,
+          "status": 0,
+          "imageBytes": 2151,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 10,
+          "name": "ps51",
+          "totalMs": 957.3345999999983,
+          "status": 0,
+          "imageBytes": 2151,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 11,
+          "name": "ps51",
+          "totalMs": 940.8670999999995,
+          "status": 0,
+          "imageBytes": 2151,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 11,
+          "name": "native",
+          "totalMs": 455.1689000000006,
+          "status": 0,
+          "imageBytes": 2151,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 12,
+          "name": "ps51",
+          "totalMs": 951.2452999999987,
+          "status": 0,
+          "imageBytes": 2151,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 12,
+          "name": "native",
+          "totalMs": 474.51590000000215,
+          "status": 0,
+          "imageBytes": 2151,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 13,
+          "name": "native",
+          "totalMs": 482.4260000000031,
+          "status": 0,
+          "imageBytes": 2151,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 13,
+          "name": "ps51",
+          "totalMs": 951.1913000000022,
+          "status": 0,
+          "imageBytes": 2151,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 14,
+          "name": "native",
+          "totalMs": 455.0486000000019,
+          "status": 0,
+          "imageBytes": 2151,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 14,
+          "name": "ps51",
+          "totalMs": 949.2805000000008,
+          "status": 0,
+          "imageBytes": 2151,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 15,
+          "name": "ps51",
+          "totalMs": 1014.8942999999999,
+          "status": 0,
+          "imageBytes": 2151,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 15,
+          "name": "native",
+          "totalMs": 494.0685000000012,
+          "status": 0,
+          "imageBytes": 2151,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 16,
+          "name": "ps51",
+          "totalMs": 997.2609999999986,
+          "status": 0,
+          "imageBytes": 2151,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 16,
+          "name": "native",
+          "totalMs": 518.2692999999999,
+          "status": 0,
+          "imageBytes": 2151,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 17,
+          "name": "native",
+          "totalMs": 509.15940000000046,
+          "status": 0,
+          "imageBytes": 2151,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 17,
+          "name": "ps51",
+          "totalMs": 978.637700000003,
+          "status": 0,
+          "imageBytes": 2151,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 18,
+          "name": "native",
+          "totalMs": 478.9346000000005,
+          "status": 0,
+          "imageBytes": 2151,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 18,
+          "name": "ps51",
+          "totalMs": 970.1674000000021,
+          "status": 0,
+          "imageBytes": 2151,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 19,
+          "name": "ps51",
+          "totalMs": 952.709899999998,
+          "status": 0,
+          "imageBytes": 2151,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 19,
+          "name": "native",
+          "totalMs": 477.0926000000036,
+          "status": 0,
+          "imageBytes": 2151,
+          "pixelsVerified": true
+        }
+      ],
+      "region": {
+        "x": 49,
+        "y": 78,
+        "width": 400,
+        "height": 300
+      },
+      "medians": {
+        "ps51": 965.2507500000011,
+        "native": 485.7598500000013
+      },
+      "failures": {
+        "ps51": 0,
+        "native": 0
+      },
+      "comparisons": [
+        {
+          "baseline": "ps51",
+          "candidate": "native",
+          "matchedPairs": 20,
+          "pairedMedianSavedMs": 482.63874999999916,
+          "pairsWon": 20,
+          "medianReduction": 0.49675268317584753
+        }
+      ],
+      "complete": true
+    },
+    "final-large.json": {
+      "note": "Complete CLI wall time. Fixture/init/pixel checks excluded. Rotating then reversed order. Fresh mode uses a new initialized workspace for every sample, records failures and continues the finite schedule without retry; growing-history mode stops on failure.",
+      "fresh": false,
+      "rounds": 12,
+      "names": [
+        "ps51",
+        "native"
+      ],
+      "samples": [
+        {
+          "pair": 0,
+          "name": "ps51",
+          "totalMs": 1046.9901,
+          "status": 0,
+          "imageBytes": 6726,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 0,
+          "name": "native",
+          "totalMs": 515.0592000000001,
+          "status": 0,
+          "imageBytes": 6726,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 1,
+          "name": "native",
+          "totalMs": 542.4740999999999,
+          "status": 0,
+          "imageBytes": 6726,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 1,
+          "name": "ps51",
+          "totalMs": 1033.8073,
+          "status": 0,
+          "imageBytes": 6726,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 2,
+          "name": "native",
+          "totalMs": 588.2500999999997,
+          "status": 0,
+          "imageBytes": 6726,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 2,
+          "name": "ps51",
+          "totalMs": 1063.7695999999996,
+          "status": 0,
+          "imageBytes": 6726,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 3,
+          "name": "ps51",
+          "totalMs": 1078.4087,
+          "status": 0,
+          "imageBytes": 6726,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 3,
+          "name": "native",
+          "totalMs": 622.2636000000002,
+          "status": 0,
+          "imageBytes": 6726,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 4,
+          "name": "ps51",
+          "totalMs": 1150.4033000000009,
+          "status": 0,
+          "imageBytes": 6726,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 4,
+          "name": "native",
+          "totalMs": 618.4577000000008,
+          "status": 0,
+          "imageBytes": 6726,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 5,
+          "name": "native",
+          "totalMs": 679.247800000001,
+          "status": 0,
+          "imageBytes": 6726,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 5,
+          "name": "ps51",
+          "totalMs": 1167.3279000000002,
+          "status": 0,
+          "imageBytes": 6726,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 6,
+          "name": "native",
+          "totalMs": 690.3217999999997,
+          "status": 0,
+          "imageBytes": 6726,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 6,
+          "name": "ps51",
+          "totalMs": 1194.689699999999,
+          "status": 0,
+          "imageBytes": 6726,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 7,
+          "name": "ps51",
+          "totalMs": 1224.4148999999998,
+          "status": 0,
+          "imageBytes": 6726,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 7,
+          "name": "native",
+          "totalMs": 750.2513999999992,
+          "status": 0,
+          "imageBytes": 6726,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 8,
+          "name": "ps51",
+          "totalMs": 1253.309799999999,
+          "status": 0,
+          "imageBytes": 6726,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 8,
+          "name": "native",
+          "totalMs": 872.2827999999972,
+          "status": 0,
+          "imageBytes": 6726,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 9,
+          "name": "native",
+          "totalMs": 873.0690000000031,
+          "status": 0,
+          "imageBytes": 6726,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 9,
+          "name": "ps51",
+          "totalMs": 1367.712599999999,
+          "status": 0,
+          "imageBytes": 6726,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 10,
+          "name": "native",
+          "totalMs": 826.9248999999982,
+          "status": 0,
+          "imageBytes": 6726,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 10,
+          "name": "ps51",
+          "totalMs": 1317.181199999999,
+          "status": 0,
+          "imageBytes": 6726,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 11,
+          "name": "ps51",
+          "totalMs": 1313.0694000000003,
+          "status": 0,
+          "imageBytes": 6726,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 11,
+          "name": "native",
+          "totalMs": 839.4686000000002,
+          "status": 0,
+          "imageBytes": 6726,
+          "pixelsVerified": true
+        }
+      ],
+      "region": {
+        "x": 49,
+        "y": 78,
+        "width": 1280,
+        "height": 720
+      },
+      "medians": {
+        "ps51": 1181.0087999999996,
+        "native": 684.7848000000004
+      },
+      "failures": {
+        "ps51": 0,
+        "native": 0
+      },
+      "comparisons": [
+        {
+          "baseline": "ps51",
+          "candidate": "native",
+          "matchedPairs": 12,
+          "pairedMedianSavedMs": 489.16820000000007,
+          "pairsWon": 12,
+          "medianReduction": 0.4201696041553623
+        }
+      ],
+      "complete": true
+    }
+  }
+}

@@ -3,61 +3,87 @@ $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false)
 $OutputEncoding = [System.Text.UTF8Encoding]::new($false)
 
-$nativeSource = @'
-using System;
-using System.ComponentModel;
-using System.Runtime.InteropServices;
-using System.Text;
-public static class CuCaptureNative {
-  [DllImport("user32.dll")]
-  public static extern bool SetProcessDpiAwarenessContext(IntPtr value);
-  [DllImport("user32.dll")]
-  public static extern IntPtr GetForegroundWindow();
-  [DllImport("user32.dll")]
-  public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint processId);
-  [DllImport("user32.dll", SetLastError=true)]
-  private static extern IntPtr OpenInputDesktop(uint flags, bool inherit, uint access);
-  [DllImport("user32.dll")]
-  private static extern bool CloseDesktop(IntPtr desktop);
-  [DllImport("user32.dll", SetLastError=true, CharSet=CharSet.Unicode)]
-  private static extern bool GetUserObjectInformation(IntPtr handle, int index, StringBuilder value, int length, out int needed);
-  [DllImport("wtsapi32.dll", SetLastError=true)]
-  private static extern bool WTSQuerySessionInformation(IntPtr server, int sessionId, int infoClass, out IntPtr buffer, out int bytesReturned);
-  [DllImport("wtsapi32.dll")]
-  private static extern void WTSFreeMemory(IntPtr buffer);
+function Initialize-CaptureNative {
+  # Emit command-owned P/Invoke stubs instead of starting a C# compiler.
+  $assemblyName = [Reflection.AssemblyName]::new('CuCaptureNative')
+  $assembly = [AppDomain]::CurrentDomain.DefineDynamicAssembly($assemblyName, [Reflection.Emit.AssemblyBuilderAccess]::Run)
+  $module = $assembly.DefineDynamicModule('CuCaptureNative')
+  $typeBuilder = $module.DefineType('CuCaptureNative', [Reflection.TypeAttributes]'Public, Abstract, Sealed')
 
-  public static bool IsSessionConnected(int sessionId) {
-    IntPtr buffer;
-    int bytesReturned;
-    if (!WTSQuerySessionInformation(IntPtr.Zero, sessionId, 8, out buffer, out bytesReturned) || buffer == IntPtr.Zero || bytesReturned < 4) {
-      throw new Win32Exception(Marshal.GetLastWin32Error());
-    }
-    try {
-      return Marshal.ReadInt32(buffer) == 0;
-    } finally {
-      WTSFreeMemory(buffer);
-    }
+  function Add-NativeMethod {
+    param(
+      [string]$Name,
+      [string]$Library,
+      [Type]$ReturnType,
+      [Type[]]$Arguments,
+      [bool]$SetLastError = $false,
+      [bool]$Unicode = $false
+    )
+    $charset = if ($Unicode) { [Runtime.InteropServices.CharSet]::Unicode } else { [Runtime.InteropServices.CharSet]::None }
+    $method = $typeBuilder.DefinePInvokeMethod(
+      $Name,
+      $Library,
+      [Reflection.MethodAttributes]'Public, Static, PinvokeImpl',
+      [Reflection.CallingConventions]::Standard,
+      $ReturnType,
+      $Arguments,
+      [Runtime.InteropServices.CallingConvention]::Winapi,
+      $charset
+    )
+    $attributeType = [Runtime.InteropServices.DllImportAttribute]
+    $attribute = [Reflection.Emit.CustomAttributeBuilder]::new(
+      $attributeType.GetConstructor([Type[]]@([string])),
+      [object[]]@($Library),
+      [Reflection.FieldInfo[]]@($attributeType.GetField('SetLastError'), $attributeType.GetField('CharSet')),
+      [object[]]@($SetLastError, $charset)
+    )
+    $method.SetCustomAttribute($attribute)
+    $method.SetImplementationFlags($method.GetMethodImplementationFlags() -bor [Reflection.MethodImplAttributes]::PreserveSig)
   }
 
-  public static string InputDesktopName() {
-    const uint DESKTOP_READOBJECTS = 0x0001;
-    IntPtr desktop = OpenInputDesktop(0, false, DESKTOP_READOBJECTS);
-    if (desktop == IntPtr.Zero) return null;
-    try {
-      int needed;
-      GetUserObjectInformation(desktop, 2, null, 0, out needed);
-      if (needed <= 2 || needed > 1024) return null;
-      StringBuilder value = new StringBuilder(needed / 2);
-      return GetUserObjectInformation(desktop, 2, value, needed, out needed) ? value.ToString() : null;
-    } finally {
-      CloseDesktop(desktop);
-    }
+  Add-NativeMethod 'SetProcessDpiAwarenessContext' 'user32.dll' ([bool]) ([Type[]]@([IntPtr]))
+  Add-NativeMethod 'GetForegroundWindow' 'user32.dll' ([IntPtr]) ([Type[]]@())
+  Add-NativeMethod 'GetWindowThreadProcessId' 'user32.dll' ([uint32]) ([Type[]]@([IntPtr], [uint32].MakeByRefType()))
+  Add-NativeMethod 'OpenInputDesktop' 'user32.dll' ([IntPtr]) ([Type[]]@([uint32], [bool], [uint32])) $true
+  Add-NativeMethod 'CloseDesktop' 'user32.dll' ([bool]) ([Type[]]@([IntPtr]))
+  Add-NativeMethod 'GetUserObjectInformation' 'user32.dll' ([bool]) ([Type[]]@([IntPtr], [int], [Text.StringBuilder], [int], [int].MakeByRefType())) $true $true
+  Add-NativeMethod 'WTSQuerySessionInformation' 'wtsapi32.dll' ([bool]) ([Type[]]@([IntPtr], [int], [int], [IntPtr].MakeByRefType(), [int].MakeByRefType())) $true
+  Add-NativeMethod 'WTSFreeMemory' 'wtsapi32.dll' ([void]) ([Type[]]@([IntPtr]))
+  [void]$typeBuilder.CreateType()
+}
+
+function Test-SessionConnected {
+  param([int]$SessionId)
+  $buffer = [IntPtr]::Zero
+  [int]$bytesReturned = 0
+  if (-not [CuCaptureNative]::WTSQuerySessionInformation([IntPtr]::Zero, $SessionId, 8, [ref]$buffer, [ref]$bytesReturned) -or
+      $buffer -eq [IntPtr]::Zero -or $bytesReturned -lt 4) {
+    throw [ComponentModel.Win32Exception]::new([Runtime.InteropServices.Marshal]::GetLastWin32Error())
+  }
+  try {
+    return [Runtime.InteropServices.Marshal]::ReadInt32($buffer) -eq 0
+  } finally {
+    [CuCaptureNative]::WTSFreeMemory($buffer)
   }
 }
-'@
+
+function Get-InputDesktopName {
+  $desktop = [CuCaptureNative]::OpenInputDesktop(0, $false, 1)
+  if ($desktop -eq [IntPtr]::Zero) { return $null }
+  try {
+    [int]$needed = 0
+    [void][CuCaptureNative]::GetUserObjectInformation($desktop, 2, $null, 0, [ref]$needed)
+    if ($needed -le 2 -or $needed -gt 1024) { return $null }
+    $value = [Text.StringBuilder]::new($needed / 2)
+    if ([CuCaptureNative]::GetUserObjectInformation($desktop, 2, $value, $needed, [ref]$needed)) { return $value.ToString() }
+    return $null
+  } finally {
+    [void][CuCaptureNative]::CloseDesktop($desktop)
+  }
+}
 
 try {
-  Add-Type -TypeDefinition $nativeSource -Language CSharp
+  Initialize-CaptureNative
   $dpiAware = [CuCaptureNative]::SetProcessDpiAwarenessContext([IntPtr](-4))
   if (-not $dpiAware) {
     throw 'dpi_awareness_failed'
@@ -214,8 +240,8 @@ function New-RectObject {
 function Get-Snapshot {
   param([bool]$RequireDistinctDisplays = $false)
   $sessionId = [int][System.Diagnostics.Process]::GetCurrentProcess().SessionId
-  $connected = [CuCaptureNative]::IsSessionConnected($sessionId)
-  $desktopName = [CuCaptureNative]::InputDesktopName()
+  $connected = Test-SessionConnected -SessionId $sessionId
+  $desktopName = Get-InputDesktopName
   if (-not [Environment]::UserInteractive -or -not $connected -or $desktopName -cne 'Default') {
     throw 'desktop_unavailable'
   }

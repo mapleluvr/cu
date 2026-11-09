@@ -64,8 +64,8 @@ Keep observation authority, input delivery, and application outcomes separate.
 - **Transactional capture archive**: validated PNG/sidecar bundles, create-once
   publication, rollback-before/forward-after recovery, quotas, history, and explicit
   cleanup.
-- **Command-scoped Windows helpers**: stock Windows PowerShell 5.1 helpers exist only
-  for the command that needs desktop topology, observation, or input.
+- **Command-scoped Windows helpers**: a bundled native EXE handles desktop topology
+  and capture; Windows PowerShell 5.1 handles input. Each helper exits with its command.
 - **Stable machine output**: versioned JSON receipts, sanitized error envelopes, and
   fixed exit-code meanings for shell automation.
 
@@ -75,7 +75,7 @@ Keep observation authority, input delivery, and application outcomes separate.
 
 - Windows with an interactive default desktop
 - Node.js `22.19.0` or newer
-- Windows PowerShell 5.1
+- Windows PowerShell 5.1 for input execution (capture/displays run directly as native code)
 - Permission to observe and control the selected desktop content
 
 Locked, secure, unavailable, or elevation-bypass desktops fail closed. `cu` does not

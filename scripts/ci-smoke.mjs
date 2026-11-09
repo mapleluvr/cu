@@ -59,6 +59,10 @@ for (const helper of ["windows-capture.ps1", "windows-input.ps1"]) {
   );
 }
 
+const nativeHelper = readFileSync(resolve(repositoryRoot, "dist/helper/cu-capture.exe"));
+assert.equal(nativeHelper.subarray(0, 2).toString("ascii"), "MZ", "native capture build missing");
+assert.ok(readFileSync(resolve(repositoryRoot, "dist/helper/LICENSE.nlohmann-json"), "utf8").includes("MIT License"));
+
 const workspace = mkdtempSync(join(tmpdir(), "cu-ci-smoke-"));
 try {
   const result = spawnSync(

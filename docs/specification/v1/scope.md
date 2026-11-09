@@ -40,8 +40,9 @@ processes.
 ## Hard Constraints
 
 - `cu` is a standalone Node/TypeScript ESM CLI with no required host runtime.
-- Observation and input use a command-scoped stock Windows PowerShell 5.1 helper;
-  no model-visible or required persistent daemon exists.
+- Observation and display queries use a bundled command-scoped native executable;
+  input uses a command-scoped stock Windows PowerShell 5.1 helper. No model-visible
+  or required persistent daemon exists.
 - Current-host verification effects are limited to the test-owned controlled fixture.
   Full-desktop effects or acceptance never use the ordinary developer desktop.
 
