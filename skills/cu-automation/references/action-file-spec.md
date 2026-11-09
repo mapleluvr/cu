@@ -53,7 +53,9 @@ Validation rules:
 { "kind": "key", "key": "Enter" }
 ```
 - `key`: valid portable key name from the whitelist below.
-- *Note*: Focus keys (`Tab`, `Enter`, `Escape`, `Arrow*`) trigger a checkpoint boundary after execution.
+- *Note*: `Enter`, `NumpadEnter`, `Tab`, `Escape`, `ContextMenu`, `Insert`,
+  `Delete`, `Home`, `End`, `PageUp`, `PageDown`, arrow keys, and `F1..F24` trigger a
+  checkpoint after execution. A chord also always triggers a checkpoint.
 
 ### 4. `chord` (Simultaneous Key Combinations)
 ```json
@@ -89,15 +91,21 @@ Validation rules:
 - *Note*: Always triggers a checkpoint boundary after execution.
 
 ### 7. `pointer_move` (Hover / Reposition)
+
 ```json
 { "kind": "pointer_move", "to": { "x": 500, "y": 500 } }
 ```
+
+- A `pointer_move` counts as a coordinate action. Prefer a direct `click` over
+  `pointer_move` followed by `click`; the second coordinate action would be discarded
+  at a checkpoint.
 
 ---
 
 ## Rare Variant: `sequence` (Modifier-Held Actions)
 
 Used rarely, only when holding a modifier (such as Ctrl) during a click or drag:
+
 ```json
 {
   "kind": "sequence",
@@ -108,6 +116,7 @@ Used rarely, only when holding a modifier (such as Ctrl) during a click or drag:
   ]
 }
 ```
+
 - Must contain exactly 1 coordinate action (`click`, `drag`, `pointer_move`, `wheel`).
 - Modifiers allowed for `key_down`/`key_up`: `"Control"`, `"Alt"`, `"Shift"`.
 - **Strict balance**: Every `key_down` must have a matching `key_up` in reverse order. No keys may remain held.

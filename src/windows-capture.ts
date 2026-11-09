@@ -395,13 +395,12 @@ function defaultRequestId(): string {
   return `req_${randomBytes(16).toString("hex")}`;
 }
 
-function resolvePowerShellExecutable(): string {
+function resolveNativeCaptureExecutable(): string {
   if (process.platform !== "win32") {
     return fail();
   }
-  const slash = "\\";
-  const kernelPath = `${slash}${slash}?${slash}GLOBALROOT${slash}SystemRoot${slash}System32${slash}WindowsPowerShell${slash}v1.0${slash}powershell.exe`;
-  const resolved = realpathSync.native(kernelPath);
+  const helperPath = fileURLToPath(new URL("../helper/cu-capture.exe", import.meta.url));
+  const resolved = realpathSync.native(helperPath);
   const file = lstatSync(resolved);
   if (!file.isFile() || file.isSymbolicLink()) {
     return fail();
@@ -413,11 +412,9 @@ function defaultExecuteHelper(
   requestText: string,
   tempRoot: string,
 ): WindowsCaptureHelperExecution {
-  const helperPath = fileURLToPath(
-    new URL("../helper/windows-capture.ps1", import.meta.url),
-  );
-  const powershellPath = resolvePowerShellExecutable();
-  const systemRoot = resolve(dirname(powershellPath), "../../..");
+  const helperPath = resolveNativeCaptureExecutable();
+  const slash = "\\";
+  const systemRoot = realpathSync.native(`${slash}${slash}?${slash}GLOBALROOT${slash}SystemRoot`);
   const childEnvironment = Object.fromEntries(
     Object.entries(process.env).filter(
       ([key]) =>
@@ -425,16 +422,8 @@ function defaultExecuteHelper(
     ),
   );
   const result = spawnSync(
-    powershellPath,
-    [
-      "-NoLogo",
-      "-NoProfile",
-      "-NonInteractive",
-      "-ExecutionPolicy",
-      "Bypass",
-      "-File",
-      helperPath,
-    ],
+    helperPath,
+    [],
     {
       input: requestText,
       windowsHide: true,

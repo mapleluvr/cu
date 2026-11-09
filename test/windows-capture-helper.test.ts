@@ -15,7 +15,14 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 import { deriveDisplayInventory } from "../src/display.js";
 import { parseRegionSelector } from "../src/region.js";
-import { stockPowerShellPath } from "./support/controlled-window.js";
+import {
+  decodePngRgba,
+  deriveControlledPatternColors,
+  readControlledPattern,
+  sampleRgb,
+  startControlledWindowFixture,
+  stockPowerShellPath,
+} from "./support/controlled-window.js";
 
 function helperPath(): string {
   return resolve(
@@ -23,6 +30,68 @@ function helperPath(): string {
     "../helper/windows-capture.ps1",
   );
 }
+
+test("capture helper observes owned pixels when runtime C# compilation is unavailable", {
+  skip: process.platform !== "win32",
+}, async (t) => {
+  const root = mkdtempSync(join(tmpdir(), "cu-helper-no-compiler-"));
+  t.after(() => rmSync(root, { recursive: true, force: true }));
+  const fixture = await startControlledWindowFixture();
+  try {
+    const destinationPath = join(root, "capture.png");
+    const rectangle = fixture.target;
+    const probe = String.raw`
+function Add-Type {
+  param([string]$TypeDefinition, [string[]]$AssemblyName, [string]$Language)
+  if ($PSBoundParameters.ContainsKey('TypeDefinition')) {
+    throw 'runtime_compilation_unavailable'
+  }
+  Microsoft.PowerShell.Utility\Add-Type -AssemblyName $AssemblyName
+}
+& $env:CU_CAPTURE_HELPER
+`;
+    const execution = spawnSync(
+      stockPowerShellPath(),
+      ["-NoLogo", "-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-Command", probe],
+      {
+        input: `${JSON.stringify({
+          kind: "cu.windows-capture.request/v1",
+          requestId: `req_${"a".repeat(32)}`,
+          destinationPath,
+          selector: {
+            kind: "pixel",
+            left: rectangle.x,
+            top: rectangle.y,
+            width: rectangle.width,
+            height: rectangle.height,
+          },
+        })}\n`,
+        encoding: "utf8",
+        windowsHide: true,
+        shell: false,
+        timeout: 15_000,
+        env: { ...process.env, CU_CAPTURE_HELPER: helperPath(), TEMP: root, TMP: root },
+      },
+    );
+    assert.equal(execution.status, 0, execution.stderr);
+    assert.equal(execution.stderr, "");
+    const result = JSON.parse(execution.stdout) as Record<string, unknown>;
+    assert.equal(result.kind, "cu.windows-capture.result/v1");
+    assert.equal(result.requestId, `req_${"a".repeat(32)}`);
+    assert.deepEqual(result.sourceRectPx, rectangle);
+    const decoded = decodePngRgba(readFileSync(destinationPath));
+    assert.equal(decoded.width, rectangle.width);
+    assert.equal(decoded.height, rectangle.height);
+    const colors = deriveControlledPatternColors(fixture.token);
+    const pattern = readControlledPattern();
+    for (const [index, point] of pattern.samples.entries()) {
+      assert.deepEqual(sampleRgb(decoded, point.x, point.y), colors.target[index]);
+    }
+    assert.deepEqual(await fixture.snapshotAndClear(), { target: [], decoy: [] });
+  } finally {
+    await fixture.stop();
+  }
+});
 
 function runTopologyValidation(topology: Record<string, unknown>) {
   const probe = String.raw`

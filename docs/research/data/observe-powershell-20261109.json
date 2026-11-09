@@ -1,0 +1,2139 @@
+{
+  "date": "2026-11-09",
+  "conditions": {
+    "node": "24.15.0",
+    "pwsh": "7.6.9",
+    "coreRuntime": ".NET 10.0.14",
+    "stock": "5.1.26100.9711",
+    "region": "400x300",
+    "gameRunning": true,
+    "helperProtocolUnchanged": true
+  },
+  "experiments": {
+    "runtime-cli.json": {
+      "note": "CLI child process wall time; fixture setup, init, independent PNG verification and cleanup excluded. Equal growing histories; AB/BA ordering; no input injected.",
+      "summary": {
+        "rounds": 12,
+        "region": {
+          "x": 49,
+          "y": 78,
+          "width": 400,
+          "height": 300
+        },
+        "candidateMedianMs": 1742.8421999999991,
+        "candidateMinMs": 1566.4042000000009,
+        "candidateMaxMs": 2192.3762000000006,
+        "baselineMedianMs": 1650.1657999999989,
+        "pairedMedianSavedMs": -110.09355000000141,
+        "pairsWon": 2,
+        "reduction": -0.056161871734343505
+      },
+      "samples": [
+        {
+          "pair": 0,
+          "variant": "baseline",
+          "totalMs": 1637.3953999999999,
+          "imageBytes": 2168,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 0,
+          "variant": "candidate",
+          "totalMs": 1624.3202000000006,
+          "imageBytes": 2168,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 1,
+          "variant": "candidate",
+          "totalMs": 1852.6908999999996,
+          "imageBytes": 2168,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 1,
+          "variant": "baseline",
+          "totalMs": 1593.1417000000001,
+          "imageBytes": 2168,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 2,
+          "variant": "baseline",
+          "totalMs": 1502.6961999999994,
+          "imageBytes": 2168,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 2,
+          "variant": "candidate",
+          "totalMs": 1629.4650000000001,
+          "imageBytes": 2168,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 3,
+          "variant": "candidate",
+          "totalMs": 1566.4042000000009,
+          "imageBytes": 2168,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 3,
+          "variant": "baseline",
+          "totalMs": 1678.7849000000006,
+          "imageBytes": 2168,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 4,
+          "variant": "baseline",
+          "totalMs": 1794.4009999999998,
+          "imageBytes": 2168,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 4,
+          "variant": "candidate",
+          "totalMs": 2192.3762000000006,
+          "imageBytes": 2168,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 5,
+          "variant": "candidate",
+          "totalMs": 2025.5805,
+          "imageBytes": 2168,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 5,
+          "variant": "baseline",
+          "totalMs": 1650.9377999999997,
+          "imageBytes": 2168,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 6,
+          "variant": "baseline",
+          "totalMs": 1613.0365999999995,
+          "imageBytes": 2168,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 6,
+          "variant": "candidate",
+          "totalMs": 1698.2063999999991,
+          "imageBytes": 2168,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 7,
+          "variant": "candidate",
+          "totalMs": 1682.6569999999992,
+          "imageBytes": 2168,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 7,
+          "variant": "baseline",
+          "totalMs": 1608.138799999997,
+          "imageBytes": 2168,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 8,
+          "variant": "baseline",
+          "totalMs": 1676.1238999999987,
+          "imageBytes": 2168,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 8,
+          "variant": "candidate",
+          "totalMs": 1779.5155000000013,
+          "imageBytes": 2168,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 9,
+          "variant": "candidate",
+          "totalMs": 1707.7727999999988,
+          "imageBytes": 2168,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 9,
+          "variant": "baseline",
+          "totalMs": 1649.393799999998,
+          "imageBytes": 2168,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 10,
+          "variant": "baseline",
+          "totalMs": 1677.6420999999973,
+          "imageBytes": 2168,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 10,
+          "variant": "candidate",
+          "totalMs": 1812.7632000000012,
+          "imageBytes": 2168,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 11,
+          "variant": "candidate",
+          "totalMs": 1777.9115999999995,
+          "imageBytes": 2168,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 11,
+          "variant": "baseline",
+          "totalMs": 1661.1160999999993,
+          "imageBytes": 2168,
+          "pixelsVerified": true
+        }
+      ]
+    },
+    "ps7-load-cli.json": {
+      "note": "CLI child process wall time; fixture setup, init, independent PNG verification and cleanup excluded. Equal growing histories; AB/BA ordering; no input injected.",
+      "summary": {
+        "rounds": 12,
+        "region": {
+          "x": 49,
+          "y": 78,
+          "width": 400,
+          "height": 300
+        },
+        "candidateMedianMs": 1753.6211500000006,
+        "candidateMinMs": 1584.445600000001,
+        "candidateMaxMs": 2115.3966,
+        "baselineMedianMs": 1761.5597999999982,
+        "pairedMedianSavedMs": 29.002849999997125,
+        "pairsWon": 6,
+        "reduction": 0.004506602614340771
+      },
+      "samples": [
+        {
+          "pair": 0,
+          "variant": "baseline",
+          "totalMs": 2147.3898,
+          "imageBytes": 2168,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 0,
+          "variant": "candidate",
+          "totalMs": 1750.6282999999999,
+          "imageBytes": 2168,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 1,
+          "variant": "candidate",
+          "totalMs": 1689.0509000000002,
+          "imageBytes": 2168,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 1,
+          "variant": "baseline",
+          "totalMs": 1636.9727000000003,
+          "imageBytes": 2168,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 2,
+          "variant": "baseline",
+          "totalMs": 1733.467999999999,
+          "imageBytes": 2168,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 2,
+          "variant": "candidate",
+          "totalMs": 1596.0246000000006,
+          "imageBytes": 2168,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 3,
+          "variant": "candidate",
+          "totalMs": 1584.445600000001,
+          "imageBytes": 2168,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 3,
+          "variant": "baseline",
+          "totalMs": 1652.1777999999995,
+          "imageBytes": 2168,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 4,
+          "variant": "baseline",
+          "totalMs": 1631.820099999999,
+          "imageBytes": 2168,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 4,
+          "variant": "candidate",
+          "totalMs": 1756.6140000000014,
+          "imageBytes": 2168,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 5,
+          "variant": "candidate",
+          "totalMs": 1714.629499999999,
+          "imageBytes": 2168,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 5,
+          "variant": "baseline",
+          "totalMs": 1692.1359999999986,
+          "imageBytes": 2168,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 6,
+          "variant": "baseline",
+          "totalMs": 1674.3503999999994,
+          "imageBytes": 2168,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 6,
+          "variant": "candidate",
+          "totalMs": 1728.291000000001,
+          "imageBytes": 2168,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 7,
+          "variant": "candidate",
+          "totalMs": 1813.9071000000004,
+          "imageBytes": 2168,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 7,
+          "variant": "baseline",
+          "totalMs": 1945.2069999999985,
+          "imageBytes": 2168,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 8,
+          "variant": "baseline",
+          "totalMs": 2294.2936999999984,
+          "imageBytes": 2168,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 8,
+          "variant": "candidate",
+          "totalMs": 2115.3966,
+          "imageBytes": 2168,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 9,
+          "variant": "candidate",
+          "totalMs": 1956.5251000000062,
+          "imageBytes": 2168,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 9,
+          "variant": "baseline",
+          "totalMs": 1901.9075999999986,
+          "imageBytes": 2168,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 10,
+          "variant": "baseline",
+          "totalMs": 1789.6515999999974,
+          "imageBytes": 2168,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 10,
+          "variant": "candidate",
+          "totalMs": 1799.3781000000017,
+          "imageBytes": 2168,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 11,
+          "variant": "candidate",
+          "totalMs": 1766.1781000000046,
+          "imageBytes": 2168,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 11,
+          "variant": "baseline",
+          "totalMs": 2011.3085999999967,
+          "imageBytes": 2168,
+          "pixelsVerified": true
+        }
+      ]
+    },
+    "final-fresh-matrix.json": {
+      "note": "Complete CLI wall time. Fixture/init/pixel checks excluded. Rotating then reversed order. Fresh mode uses a new initialized workspace for every sample, records failures and continues the finite schedule without retry; growing-history mode stops on failure.",
+      "fresh": true,
+      "rounds": 20,
+      "names": [
+        "ps51-current",
+        "ps7-portable",
+        "ps7-dll",
+        "ps7-dll-load-native",
+        "ps51-dll-load-native"
+      ],
+      "samples": [
+        {
+          "pair": 0,
+          "name": "ps51-current",
+          "totalMs": 1046.5522,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 0,
+          "name": "ps7-portable",
+          "totalMs": 1052.4125,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 0,
+          "name": "ps7-dll",
+          "totalMs": 967.8904000000002,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 0,
+          "name": "ps7-dll-load-native",
+          "totalMs": 1010.0720999999999,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 0,
+          "name": "ps51-dll-load-native",
+          "totalMs": 903.9772000000003,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 1,
+          "name": "ps7-portable",
+          "totalMs": 1035.0147000000006,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 1,
+          "name": "ps7-dll",
+          "totalMs": 986.991,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 1,
+          "name": "ps7-dll-load-native",
+          "totalMs": 1015.3782000000001,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 1,
+          "name": "ps51-dll-load-native",
+          "totalMs": 916.937100000001,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 1,
+          "name": "ps51-current",
+          "totalMs": 940.4871000000003,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 2,
+          "name": "ps7-dll",
+          "totalMs": 1011.2037999999993,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 2,
+          "name": "ps7-dll-load-native",
+          "totalMs": 1004.6682000000001,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 2,
+          "name": "ps51-dll-load-native",
+          "totalMs": 924.7963999999993,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 2,
+          "name": "ps51-current",
+          "totalMs": 943.5378000000001,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 2,
+          "name": "ps7-portable",
+          "totalMs": 1007.9500000000007,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 3,
+          "name": "ps7-dll-load-native",
+          "totalMs": 966.7709999999988,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 3,
+          "name": "ps51-dll-load-native",
+          "totalMs": 942.582400000003,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 3,
+          "name": "ps51-current",
+          "totalMs": 946.5083000000013,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 3,
+          "name": "ps7-portable",
+          "totalMs": 1024.0099999999984,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 3,
+          "name": "ps7-dll",
+          "totalMs": 1035.6679000000004,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 4,
+          "name": "ps51-dll-load-native",
+          "totalMs": 920.4357000000018,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 4,
+          "name": "ps51-current",
+          "totalMs": 967.4998000000014,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 4,
+          "name": "ps7-portable",
+          "totalMs": 1045.7610999999997,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 4,
+          "name": "ps7-dll",
+          "totalMs": 975.354800000001,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 4,
+          "name": "ps7-dll-load-native",
+          "totalMs": 1011.1539999999986,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 5,
+          "name": "ps51-dll-load-native",
+          "totalMs": 937.8051000000014,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 5,
+          "name": "ps7-dll-load-native",
+          "totalMs": 1027.3044999999984,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 5,
+          "name": "ps7-dll",
+          "totalMs": 1018.6768999999986,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 5,
+          "name": "ps7-portable",
+          "totalMs": 1059.2956999999988,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 5,
+          "name": "ps51-current",
+          "totalMs": 1002.8746000000028,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 6,
+          "name": "ps51-current",
+          "totalMs": 989.202699999998,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 6,
+          "name": "ps51-dll-load-native",
+          "totalMs": 943.7183999999979,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 6,
+          "name": "ps7-dll-load-native",
+          "totalMs": 970.5559999999969,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 6,
+          "name": "ps7-dll",
+          "totalMs": 1013.5826000000015,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 6,
+          "name": "ps7-portable",
+          "totalMs": 1079.3332999999984,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 7,
+          "name": "ps7-portable",
+          "totalMs": 1010.6099000000031,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 7,
+          "name": "ps51-current",
+          "totalMs": 943.7368999999962,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 7,
+          "name": "ps51-dll-load-native",
+          "totalMs": 945.2650000000067,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 7,
+          "name": "ps7-dll-load-native",
+          "totalMs": 956.9170000000013,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 7,
+          "name": "ps7-dll",
+          "totalMs": 1020.2512999999963,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 8,
+          "name": "ps7-dll",
+          "totalMs": 1018.2253999999957,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 8,
+          "name": "ps7-portable",
+          "totalMs": 1040.012999999999,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 8,
+          "name": "ps51-current",
+          "totalMs": 948.8810999999987,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 8,
+          "name": "ps51-dll-load-native",
+          "totalMs": 918.9311000000016,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 8,
+          "name": "ps7-dll-load-native",
+          "totalMs": 950.6301000000021,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 9,
+          "name": "ps7-dll-load-native",
+          "totalMs": 1027.486100000002,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 9,
+          "name": "ps7-dll",
+          "totalMs": 1021.1343000000052,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 9,
+          "name": "ps7-portable",
+          "totalMs": 1029.6935000000012,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 9,
+          "name": "ps51-current",
+          "totalMs": 955.0138000000006,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 9,
+          "name": "ps51-dll-load-native",
+          "totalMs": 939.2188999999998,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 10,
+          "name": "ps51-current",
+          "totalMs": 945.3205999999991,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 10,
+          "name": "ps7-portable",
+          "totalMs": 975.904300000002,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 10,
+          "name": "ps7-dll",
+          "totalMs": 948.2316999999966,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 10,
+          "name": "ps7-dll-load-native",
+          "totalMs": 1018.3480999999956,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 10,
+          "name": "ps51-dll-load-native",
+          "totalMs": 916.5535000000018,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 11,
+          "name": "ps7-portable",
+          "totalMs": 1027.8575000000055,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 11,
+          "name": "ps7-dll",
+          "totalMs": 965.0241000000024,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 11,
+          "name": "ps7-dll-load-native",
+          "totalMs": 1012.447699999997,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 11,
+          "name": "ps51-dll-load-native",
+          "totalMs": 941.6624000000011,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 11,
+          "name": "ps51-current",
+          "totalMs": 958.3879000000015,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 12,
+          "name": "ps7-dll",
+          "totalMs": 1017.9833999999973,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 12,
+          "name": "ps7-dll-load-native",
+          "totalMs": 1022.3620999999985,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 12,
+          "name": "ps51-dll-load-native",
+          "totalMs": 938.1107999999949,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 12,
+          "name": "ps51-current",
+          "totalMs": 941.0277999999962,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 12,
+          "name": "ps7-portable",
+          "totalMs": 1024.3182000000015,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 13,
+          "name": "ps7-dll-load-native",
+          "totalMs": 953.0978000000032,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 13,
+          "name": "ps51-dll-load-native",
+          "totalMs": 923.3213000000105,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 13,
+          "name": "ps51-current",
+          "totalMs": 962.9323000000004,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 13,
+          "name": "ps7-portable",
+          "totalMs": 1058.5678999999946,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 13,
+          "name": "ps7-dll",
+          "totalMs": 973.3887000000104,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 14,
+          "name": "ps51-dll-load-native",
+          "totalMs": 923.4328999999998,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 14,
+          "name": "ps51-current",
+          "totalMs": 973.755600000004,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 14,
+          "name": "ps7-portable",
+          "totalMs": 1068.4334999999992,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 14,
+          "name": "ps7-dll",
+          "totalMs": 972.472099999999,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 14,
+          "name": "ps7-dll-load-native",
+          "totalMs": 1012.7918999999965,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 15,
+          "name": "ps51-dll-load-native",
+          "totalMs": 918.1851000000024,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 15,
+          "name": "ps7-dll-load-native",
+          "totalMs": 998.5339000000095,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 15,
+          "name": "ps7-dll",
+          "totalMs": 1038.0089000000007,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 15,
+          "name": "ps7-portable",
+          "totalMs": 1060.7926999999909,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 15,
+          "name": "ps51-current",
+          "totalMs": 989.4297999999981,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 16,
+          "name": "ps51-current",
+          "totalMs": 963.1500999999989,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 16,
+          "name": "ps51-dll-load-native",
+          "totalMs": 959.4480999999942,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 16,
+          "name": "ps7-dll-load-native",
+          "totalMs": 1007.6137000000017,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 16,
+          "name": "ps7-dll",
+          "totalMs": 1049.2593999999954,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 16,
+          "name": "ps7-portable",
+          "totalMs": 1062.9623999999894,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 17,
+          "name": "ps7-portable",
+          "totalMs": 1001.5418000000063,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 17,
+          "name": "ps51-current",
+          "totalMs": 981.055400000012,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 17,
+          "name": "ps51-dll-load-native",
+          "totalMs": 930.6694999999891,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 17,
+          "name": "ps7-dll-load-native",
+          "totalMs": 1007.5179000000062,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 17,
+          "name": "ps7-dll",
+          "totalMs": 1005.7292999999918,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 18,
+          "name": "ps7-dll",
+          "totalMs": 1003.2740999999951,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 18,
+          "name": "ps7-portable",
+          "totalMs": 1034.8650000000052,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 18,
+          "name": "ps51-current",
+          "totalMs": 950.511599999998,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 18,
+          "name": "ps51-dll-load-native",
+          "totalMs": 949.9475000000093,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 18,
+          "name": "ps7-dll-load-native",
+          "totalMs": 973.5977999999886,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 19,
+          "name": "ps7-dll-load-native",
+          "totalMs": 1014.4192000000039,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 19,
+          "name": "ps7-dll",
+          "totalMs": 1001.8784000000014,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 19,
+          "name": "ps7-portable",
+          "totalMs": 1038.6964000000007,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 19,
+          "name": "ps51-current",
+          "totalMs": 952.3892999999953,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 19,
+          "name": "ps51-dll-load-native",
+          "totalMs": 926.7143999999971,
+          "status": 0,
+          "imageBytes": 2173,
+          "pixelsVerified": true
+        }
+      ],
+      "region": {
+        "x": 49,
+        "y": 78,
+        "width": 400,
+        "height": 300
+      },
+      "medians": {
+        "ps51-current": 956.7008500000011,
+        "ps7-portable": 1036.8555500000007,
+        "ps7-dll": 1008.4665499999956,
+        "ps7-dll-load-native": 1008.8429000000008,
+        "ps51-dll-load-native": 928.6919499999931
+      },
+      "failures": {
+        "ps51-current": 0,
+        "ps7-portable": 0,
+        "ps7-dll": 0,
+        "ps7-dll-load-native": 0,
+        "ps51-dll-load-native": 0
+      },
+      "comparisons": [
+        {
+          "baseline": "ps51-current",
+          "candidate": "ps7-portable",
+          "matchedPairs": 20,
+          "pairedMedianSavedMs": -77.88149999999769,
+          "pairsWon": 0,
+          "medianReduction": -0.0837824070084181
+        },
+        {
+          "baseline": "ps51-current",
+          "candidate": "ps7-dll",
+          "matchedPairs": 20,
+          "pairedMedianSavedMs": -47.54150000000118,
+          "pairsWon": 2,
+          "medianReduction": -0.054108554413842436
+        },
+        {
+          "baseline": "ps51-current",
+          "candidate": "ps7-dll-load-native",
+          "matchedPairs": 20,
+          "pairedMedianSavedMs": -32.74939999999333,
+          "pairsWon": 3,
+          "medianReduction": -0.05450193757013966
+        },
+        {
+          "baseline": "ps51-current",
+          "candidate": "ps51-dll-load-native",
+          "matchedPairs": 20,
+          "pairedMedianSavedMs": 27.22099999999773,
+          "pairsWon": 19,
+          "medianReduction": 0.02927654971771787
+        },
+        {
+          "baseline": "ps7-portable",
+          "candidate": "ps7-dll",
+          "matchedPairs": 20,
+          "pairedMedianSavedMs": 29.63175000000774,
+          "pairsWon": 16,
+          "medianReduction": 0.027379898771825117
+        },
+        {
+          "baseline": "ps7-portable",
+          "candidate": "ps7-dll-load-native",
+          "matchedPairs": 20,
+          "pairedMedianSavedMs": 38.473750000000564,
+          "pairsWon": 18,
+          "medianReduction": 0.02701692632112529
+        },
+        {
+          "baseline": "ps7-portable",
+          "candidate": "ps51-dll-load-native",
+          "matchedPairs": 20,
+          "pairedMedianSavedMs": 107.74814999999944,
+          "pairsWon": 20,
+          "medianReduction": 0.10431887064693579
+        },
+        {
+          "baseline": "ps7-dll",
+          "candidate": "ps7-dll-load-native",
+          "matchedPairs": 20,
+          "pairedMedianSavedMs": -3.083650000007765,
+          "pairsWon": 9,
+          "medianReduction": -0.0003731903651194024
+        },
+        {
+          "baseline": "ps7-dll",
+          "candidate": "ps51-dll-load-native",
+          "matchedPairs": 20,
+          "pairedMedianSavedMs": 75.02304999999615,
+          "pairsWon": 20,
+          "medianReduction": 0.0791048547916664
+        },
+        {
+          "baseline": "ps7-dll-load-native",
+          "candidate": "ps51-dll-load-native",
+          "matchedPairs": 20,
+          "pairedMedianSavedMs": 80.11030000000392,
+          "pairsWon": 20,
+          "medianReduction": 0.0794483957809562
+        }
+      ],
+      "complete": true
+    },
+    "ps51-dll-fresh-matrix.json": {
+      "note": "Complete CLI wall time. Fixture/init/pixel checks excluded. Rotating then reversed order. Fresh mode uses a new initialized workspace for every sample, records failures and continues the finite schedule without retry; growing-history mode stops on failure.",
+      "fresh": true,
+      "rounds": 20,
+      "names": [
+        "ps51-current",
+        "ps51-dll",
+        "ps51-dll-load-native"
+      ],
+      "samples": [
+        {
+          "pair": 0,
+          "name": "ps51-current",
+          "totalMs": 1056.1922,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 0,
+          "name": "ps51-dll",
+          "totalMs": 939.8139000000001,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 0,
+          "name": "ps51-dll-load-native",
+          "totalMs": 1027.4861999999998,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 1,
+          "name": "ps51-dll",
+          "totalMs": 973.6432999999997,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 1,
+          "name": "ps51-dll-load-native",
+          "totalMs": 909.3524000000007,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 1,
+          "name": "ps51-current",
+          "totalMs": 952.0236000000004,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 2,
+          "name": "ps51-dll-load-native",
+          "totalMs": 914.7133000000003,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 2,
+          "name": "ps51-current",
+          "totalMs": 950.2282999999998,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 2,
+          "name": "ps51-dll",
+          "totalMs": 947.9606000000003,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 3,
+          "name": "ps51-dll-load-native",
+          "totalMs": 913.4260000000013,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 3,
+          "name": "ps51-dll",
+          "totalMs": 943.981600000001,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 3,
+          "name": "ps51-current",
+          "totalMs": 959.4068000000007,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 4,
+          "name": "ps51-current",
+          "totalMs": 927.9098999999987,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 4,
+          "name": "ps51-dll-load-native",
+          "totalMs": 917.5491000000002,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 4,
+          "name": "ps51-dll",
+          "totalMs": 929.5725999999995,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 5,
+          "name": "ps51-dll",
+          "totalMs": 905.6728999999996,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 5,
+          "name": "ps51-current",
+          "totalMs": 952.2258000000002,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 5,
+          "name": "ps51-dll-load-native",
+          "totalMs": 937.9012999999977,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 6,
+          "name": "ps51-current",
+          "totalMs": 934.9386999999988,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 6,
+          "name": "ps51-dll",
+          "totalMs": 913.0184999999983,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 6,
+          "name": "ps51-dll-load-native",
+          "totalMs": 943.3489000000009,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 7,
+          "name": "ps51-dll",
+          "totalMs": 941.8706999999995,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 7,
+          "name": "ps51-dll-load-native",
+          "totalMs": 905.0490000000027,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 7,
+          "name": "ps51-current",
+          "totalMs": 939.7343000000001,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 8,
+          "name": "ps51-dll-load-native",
+          "totalMs": 909.5178000000014,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 8,
+          "name": "ps51-current",
+          "totalMs": 931.1839,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 8,
+          "name": "ps51-dll",
+          "totalMs": 897.3567000000003,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 9,
+          "name": "ps51-dll-load-native",
+          "totalMs": 907.7981,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 9,
+          "name": "ps51-dll",
+          "totalMs": 936.5390000000007,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 9,
+          "name": "ps51-current",
+          "totalMs": 940.7380999999987,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 10,
+          "name": "ps51-current",
+          "totalMs": 937.1731,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 10,
+          "name": "ps51-dll-load-native",
+          "totalMs": 904.4634000000005,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 10,
+          "name": "ps51-dll",
+          "totalMs": 933.040399999998,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 11,
+          "name": "ps51-dll",
+          "totalMs": 935.3823999999986,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 11,
+          "name": "ps51-current",
+          "totalMs": 946.4683999999979,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 11,
+          "name": "ps51-dll-load-native",
+          "totalMs": 946.3258999999962,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 12,
+          "name": "ps51-current",
+          "totalMs": 960.9720000000016,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 12,
+          "name": "ps51-dll",
+          "totalMs": 937.6187999999966,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 12,
+          "name": "ps51-dll-load-native",
+          "totalMs": 935.8058999999994,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 13,
+          "name": "ps51-dll",
+          "totalMs": 946.9652999999962,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 13,
+          "name": "ps51-dll-load-native",
+          "totalMs": 937.7785999999978,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 13,
+          "name": "ps51-current",
+          "totalMs": 958.1574999999939,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 14,
+          "name": "ps51-dll-load-native",
+          "totalMs": 942.4571999999971,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 14,
+          "name": "ps51-current",
+          "totalMs": 941.5121999999974,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 14,
+          "name": "ps51-dll",
+          "totalMs": 946.5600999999951,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 15,
+          "name": "ps51-dll-load-native",
+          "totalMs": 943.7576999999947,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 15,
+          "name": "ps51-dll",
+          "totalMs": 954.6493000000046,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 15,
+          "name": "ps51-current",
+          "totalMs": 965.3130999999994,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 16,
+          "name": "ps51-current",
+          "totalMs": 958.5311999999976,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 16,
+          "name": "ps51-dll-load-native",
+          "totalMs": 950.850099999996,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 16,
+          "name": "ps51-dll",
+          "totalMs": 945.0316999999995,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 17,
+          "name": "ps51-dll",
+          "totalMs": 932.1214000000036,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 17,
+          "name": "ps51-current",
+          "totalMs": 966.1789999999964,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 17,
+          "name": "ps51-dll-load-native",
+          "totalMs": 952.4686000000002,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 18,
+          "name": "ps51-current",
+          "totalMs": 952.7826999999961,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 18,
+          "name": "ps51-dll",
+          "totalMs": 925.4013999999952,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 18,
+          "name": "ps51-dll-load-native",
+          "totalMs": 951.4279000000024,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 19,
+          "name": "ps51-dll",
+          "totalMs": 949.5264999999999,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 19,
+          "name": "ps51-dll-load-native",
+          "totalMs": 914.823000000004,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        },
+        {
+          "pair": 19,
+          "name": "ps51-current",
+          "totalMs": 971.5207999999984,
+          "status": 0,
+          "imageBytes": 2166,
+          "pixelsVerified": true
+        }
+      ],
+      "region": {
+        "x": 49,
+        "y": 78,
+        "width": 400,
+        "height": 300
+      },
+      "medians": {
+        "ps51-current": 952.1247000000003,
+        "ps51-dll": 938.7163499999983,
+        "ps51-dll-load-native": 936.7922499999986
+      },
+      "failures": {
+        "ps51-current": 0,
+        "ps51-dll": 0,
+        "ps51-dll-load-native": 0
+      },
+      "comparisons": [
+        {
+          "baseline": "ps51-current",
+          "candidate": "ps51-dll",
+          "matchedPairs": 20,
+          "pairedMedianSavedMs": 12.345849999997881,
+          "pairsWon": 16,
+          "medianReduction": 0.014082556623099873
+        },
+        {
+          "baseline": "ps51-current",
+          "candidate": "ps51-dll-load-native",
+          "matchedPairs": 20,
+          "pairedMedianSavedMs": 21.610750000001644,
+          "pairsWon": 18,
+          "medianReduction": 0.016103405362765666
+        },
+        {
+          "baseline": "ps51-dll",
+          "candidate": "ps51-dll-load-native",
+          "matchedPairs": 20,
+          "pairedMedianSavedMs": 6.644799999998213,
+          "pairsWon": 12,
+          "medianReduction": 0.002049713952462562
+        }
+      ],
+      "complete": true
+    },
+    "startup.json": {
+      "note": "Fresh process, warm OS caches, exit 0; game/background load retained.",
+      "summary": {
+        "ps51": 187.78035,
+        "ps7": 232.21714999999995
+      },
+      "samples": [
+        {
+          "pair": 0,
+          "name": "ps51",
+          "totalMs": 210.2994
+        },
+        {
+          "pair": 0,
+          "name": "ps7",
+          "totalMs": 253.7116
+        },
+        {
+          "pair": 1,
+          "name": "ps7",
+          "totalMs": 234.92679999999996
+        },
+        {
+          "pair": 1,
+          "name": "ps51",
+          "totalMs": 208.86020000000008
+        },
+        {
+          "pair": 2,
+          "name": "ps51",
+          "totalMs": 204.3723000000001
+        },
+        {
+          "pair": 2,
+          "name": "ps7",
+          "totalMs": 218.93899999999985
+        },
+        {
+          "pair": 3,
+          "name": "ps7",
+          "totalMs": 230.07089999999994
+        },
+        {
+          "pair": 3,
+          "name": "ps51",
+          "totalMs": 181.67139999999995
+        },
+        {
+          "pair": 4,
+          "name": "ps51",
+          "totalMs": 185.26199999999994
+        },
+        {
+          "pair": 4,
+          "name": "ps7",
+          "totalMs": 229.41790000000015
+        },
+        {
+          "pair": 5,
+          "name": "ps7",
+          "totalMs": 224.07960000000003
+        },
+        {
+          "pair": 5,
+          "name": "ps51",
+          "totalMs": 180.9757999999997
+        },
+        {
+          "pair": 6,
+          "name": "ps51",
+          "totalMs": 183.91240000000016
+        },
+        {
+          "pair": 6,
+          "name": "ps7",
+          "totalMs": 225.98419999999987
+        },
+        {
+          "pair": 7,
+          "name": "ps7",
+          "totalMs": 227.41670000000022
+        },
+        {
+          "pair": 7,
+          "name": "ps51",
+          "totalMs": 187.9317000000001
+        },
+        {
+          "pair": 8,
+          "name": "ps51",
+          "totalMs": 183.32310000000007
+        },
+        {
+          "pair": 8,
+          "name": "ps7",
+          "totalMs": 231.80209999999988
+        },
+        {
+          "pair": 9,
+          "name": "ps7",
+          "totalMs": 229.4665
+        },
+        {
+          "pair": 9,
+          "name": "ps51",
+          "totalMs": 187.49159999999983
+        },
+        {
+          "pair": 10,
+          "name": "ps51",
+          "totalMs": 187.6289999999999
+        },
+        {
+          "pair": 10,
+          "name": "ps7",
+          "totalMs": 236.11419999999998
+        },
+        {
+          "pair": 11,
+          "name": "ps7",
+          "totalMs": 257.9993000000004
+        },
+        {
+          "pair": 11,
+          "name": "ps51",
+          "totalMs": 216.4306999999999
+        },
+        {
+          "pair": 12,
+          "name": "ps51",
+          "totalMs": 185.3069999999998
+        },
+        {
+          "pair": 12,
+          "name": "ps7",
+          "totalMs": 234.3191999999999
+        },
+        {
+          "pair": 13,
+          "name": "ps7",
+          "totalMs": 232.6322
+        },
+        {
+          "pair": 13,
+          "name": "ps51",
+          "totalMs": 200.03809999999976
+        },
+        {
+          "pair": 14,
+          "name": "ps51",
+          "totalMs": 191.9445999999998
+        },
+        {
+          "pair": 14,
+          "name": "ps7",
+          "totalMs": 232.67489999999998
+        },
+        {
+          "pair": 15,
+          "name": "ps7",
+          "totalMs": 233.40759999999955
+        },
+        {
+          "pair": 15,
+          "name": "ps51",
+          "totalMs": 188.46510000000035
+        }
+      ]
+    },
+    "runtime-dll-profile-summary.json": [
+      {
+        "name": "ps51-static",
+        "helperMedianMs": 888.6360500000001,
+        "stages": {
+          "nativeReady": 74.41955,
+          "assembliesReady": 131.6031,
+          "requestReady": 276.67904999999996,
+          "preSnapshot": 402.5602,
+          "pixelsReady": 457.47700000000003,
+          "postSnapshot": 494.18025,
+          "ready": 510.54460000000006
+        }
+      },
+      {
+        "name": "ps7",
+        "helperMedianMs": 1070.0535500000005,
+        "stages": {
+          "nativeReady": 64.05709999999999,
+          "assembliesReady": 256.49955,
+          "requestReady": 339.6575,
+          "preSnapshot": 451.2694,
+          "pixelsReady": 498.82174999999995,
+          "postSnapshot": 540.93935,
+          "ready": 562.35095
+        }
+      },
+      {
+        "name": "ps51-static-dll",
+        "helperMedianMs": 888.8049999999994,
+        "stages": {
+          "nativeReady": 38.42515,
+          "assembliesReady": 101.32685000000001,
+          "requestReady": 248.52975,
+          "preSnapshot": 378.36655,
+          "pixelsReady": 432.55765,
+          "postSnapshot": 470.1496,
+          "ready": 486.40465
+        }
+      },
+      {
+        "name": "ps7-dll",
+        "helperMedianMs": 981.1275999999998,
+        "stages": {
+          "nativeReady": 12.98245,
+          "assembliesReady": 181.02960000000002,
+          "requestReady": 273.25415,
+          "preSnapshot": 367.57335,
+          "pixelsReady": 412.78085,
+          "postSnapshot": 447.62705,
+          "ready": 464.31910000000005
+        }
+      }
+    ],
+    "load-profile-summary.json": [
+      {
+        "name": "ps51-static",
+        "helperMedianMs": 815.6256999999991,
+        "stages": {
+          "nativeReady": 70.98985,
+          "assembliesReady": 123.22525,
+          "requestReady": 252.40705000000003,
+          "preSnapshot": 366.79805,
+          "pixelsReady": 415.82345000000004,
+          "postSnapshot": 447.59595,
+          "ready": 463.52095
+        }
+      },
+      {
+        "name": "ps7",
+        "helperMedianMs": 966.7256499999995,
+        "stages": {
+          "nativeReady": 57.3043,
+          "assembliesReady": 228.71179999999998,
+          "requestReady": 300.63245,
+          "preSnapshot": 394.67015000000004,
+          "pixelsReady": 437.3393,
+          "postSnapshot": 478.12795,
+          "ready": 497.38445
+        }
+      },
+      {
+        "name": "ps51-static-dll-load",
+        "helperMedianMs": 808.2284500000001,
+        "stages": {
+          "nativeReady": 32.954750000000004,
+          "assembliesReady": 49.79745,
+          "requestReady": 227.3163,
+          "preSnapshot": 346.6018,
+          "pixelsReady": 396.07050000000004,
+          "postSnapshot": 433.29815,
+          "ready": 448.78095
+        }
+      },
+      {
+        "name": "ps7-dll-load",
+        "helperMedianMs": 925.9945000000002,
+        "stages": {
+          "nativeReady": 12.008949999999999,
+          "assembliesReady": 23.4247,
+          "requestReady": 250.70615,
+          "preSnapshot": 334.404,
+          "pixelsReady": 377.92494999999997,
+          "postSnapshot": 418.15105,
+          "ready": 436.78634999999997
+        }
+      }
+    ]
+  },
+  "abortedRuns": [
+    {
+      "name": "ps7-native-cli",
+      "successfulCaptures": 5,
+      "failedCaptures": 1,
+      "error": "capture_invalid",
+      "privateReason": "not retained",
+      "usedForPerformanceConclusion": false
+    },
+    {
+      "name": "native-debug-cli",
+      "successfulCaptures": 22,
+      "failedCaptures": 1,
+      "error": "capture_invalid",
+      "privateReason": "environment_changed; changing field not retained",
+      "usedForPerformanceConclusion": false
+    }
+  ]
+}

@@ -7,7 +7,23 @@ contract corrections before stable `v1.0.0`.
 
 ## [Unreleased]
 
-No user-visible changes yet.
+### Changed
+
+- Replace the capture/displays PowerShell process with a bundled command-scoped
+  native C++ executable. Retain the capture protocol, desktop admission, before/after
+  environment checks, independent PNG validation and transactional archive publication.
+  Input execution continues to use Windows PowerShell 5.1.
+- Build the native helper with MinGW-w64 or CMake/Visual Studio; installed packages
+  include the executable and JSON library license and need no compiler.
+- Add a controlled-window CLI benchmark with alternating baseline/candidate runs
+  and independent pixel verification.
+
+- Make the cu automation skill explicitly prefer Pi codemode for observation and
+  optional image delivery in one call, including reuse of action checkpoint images.
+- Document collection-only delivery, batched action-file writing, background-task
+  handling, and recovery when image delivery fails after a completed command.
+- Correct the skill's checkpoint key list and explain why move-then-click plans
+  discard the second coordinate action.
 
 ## [1.0.0-preview.1] - 2026-08-14
 

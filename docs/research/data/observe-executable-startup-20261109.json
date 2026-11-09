@@ -1,0 +1,543 @@
+{
+  "note": "Fresh process, warm filesystem caches. Empty programs only; no capture, PNG, protocol, archive, or validation. Concurrent game/background load is not controlled.",
+  "rounds": 20,
+  "binaries": {
+    "managedBytes": 3584,
+    "nativeBytes": 14848
+  },
+  "samples": [
+    {
+      "pair": 0,
+      "name": "ps51",
+      "totalMs": 189.21670000000006
+    },
+    {
+      "pair": 0,
+      "name": "ps7",
+      "totalMs": 237.77279999999996
+    },
+    {
+      "pair": 0,
+      "name": "framework-exe",
+      "totalMs": 61.19589999999994
+    },
+    {
+      "pair": 0,
+      "name": "native-exe",
+      "totalMs": 28.440399999999954
+    },
+    {
+      "pair": 0,
+      "name": "node",
+      "totalMs": 90.3900000000001
+    },
+    {
+      "pair": 1,
+      "name": "ps7",
+      "totalMs": 225.26279999999997
+    },
+    {
+      "pair": 1,
+      "name": "framework-exe",
+      "totalMs": 48.86759999999981
+    },
+    {
+      "pair": 1,
+      "name": "native-exe",
+      "totalMs": 25.95569999999998
+    },
+    {
+      "pair": 1,
+      "name": "node",
+      "totalMs": 88.3714
+    },
+    {
+      "pair": 1,
+      "name": "ps51",
+      "totalMs": 187.10860000000002
+    },
+    {
+      "pair": 2,
+      "name": "framework-exe",
+      "totalMs": 54.32849999999962
+    },
+    {
+      "pair": 2,
+      "name": "native-exe",
+      "totalMs": 25.290399999999863
+    },
+    {
+      "pair": 2,
+      "name": "node",
+      "totalMs": 89.97270000000026
+    },
+    {
+      "pair": 2,
+      "name": "ps51",
+      "totalMs": 181.95820000000003
+    },
+    {
+      "pair": 2,
+      "name": "ps7",
+      "totalMs": 227.57140000000027
+    },
+    {
+      "pair": 3,
+      "name": "native-exe",
+      "totalMs": 33.03890000000001
+    },
+    {
+      "pair": 3,
+      "name": "node",
+      "totalMs": 90.11000000000013
+    },
+    {
+      "pair": 3,
+      "name": "ps51",
+      "totalMs": 181.10390000000007
+    },
+    {
+      "pair": 3,
+      "name": "ps7",
+      "totalMs": 235.51710000000003
+    },
+    {
+      "pair": 3,
+      "name": "framework-exe",
+      "totalMs": 56.22539999999981
+    },
+    {
+      "pair": 4,
+      "name": "node",
+      "totalMs": 90.55250000000024
+    },
+    {
+      "pair": 4,
+      "name": "ps51",
+      "totalMs": 180.85999999999967
+    },
+    {
+      "pair": 4,
+      "name": "ps7",
+      "totalMs": 247.1646999999998
+    },
+    {
+      "pair": 4,
+      "name": "framework-exe",
+      "totalMs": 52.2801000000004
+    },
+    {
+      "pair": 4,
+      "name": "native-exe",
+      "totalMs": 25.015399999999772
+    },
+    {
+      "pair": 5,
+      "name": "node",
+      "totalMs": 91.06760000000031
+    },
+    {
+      "pair": 5,
+      "name": "native-exe",
+      "totalMs": 28.873999999999796
+    },
+    {
+      "pair": 5,
+      "name": "framework-exe",
+      "totalMs": 49.95590000000038
+    },
+    {
+      "pair": 5,
+      "name": "ps7",
+      "totalMs": 225.08640000000014
+    },
+    {
+      "pair": 5,
+      "name": "ps51",
+      "totalMs": 180.84220000000005
+    },
+    {
+      "pair": 6,
+      "name": "ps51",
+      "totalMs": 205.42360000000008
+    },
+    {
+      "pair": 6,
+      "name": "node",
+      "totalMs": 101.65869999999995
+    },
+    {
+      "pair": 6,
+      "name": "native-exe",
+      "totalMs": 30.115700000000288
+    },
+    {
+      "pair": 6,
+      "name": "framework-exe",
+      "totalMs": 53.39100000000053
+    },
+    {
+      "pair": 6,
+      "name": "ps7",
+      "totalMs": 233.83700000000044
+    },
+    {
+      "pair": 7,
+      "name": "ps7",
+      "totalMs": 238.88190000000031
+    },
+    {
+      "pair": 7,
+      "name": "ps51",
+      "totalMs": 195.70339999999942
+    },
+    {
+      "pair": 7,
+      "name": "node",
+      "totalMs": 92.23399999999947
+    },
+    {
+      "pair": 7,
+      "name": "native-exe",
+      "totalMs": 25.541299999999865
+    },
+    {
+      "pair": 7,
+      "name": "framework-exe",
+      "totalMs": 54.466599999999744
+    },
+    {
+      "pair": 8,
+      "name": "framework-exe",
+      "totalMs": 47.418000000000575
+    },
+    {
+      "pair": 8,
+      "name": "ps7",
+      "totalMs": 242.70959999999923
+    },
+    {
+      "pair": 8,
+      "name": "ps51",
+      "totalMs": 186.10530000000017
+    },
+    {
+      "pair": 8,
+      "name": "node",
+      "totalMs": 94.8762999999999
+    },
+    {
+      "pair": 8,
+      "name": "native-exe",
+      "totalMs": 24.646999999999935
+    },
+    {
+      "pair": 9,
+      "name": "native-exe",
+      "totalMs": 25.241299999999683
+    },
+    {
+      "pair": 9,
+      "name": "framework-exe",
+      "totalMs": 51.2493000000004
+    },
+    {
+      "pair": 9,
+      "name": "ps7",
+      "totalMs": 258.54029999999966
+    },
+    {
+      "pair": 9,
+      "name": "ps51",
+      "totalMs": 181.80000000000018
+    },
+    {
+      "pair": 9,
+      "name": "node",
+      "totalMs": 93.64660000000003
+    },
+    {
+      "pair": 10,
+      "name": "ps51",
+      "totalMs": 180.1314000000002
+    },
+    {
+      "pair": 10,
+      "name": "ps7",
+      "totalMs": 226.13150000000041
+    },
+    {
+      "pair": 10,
+      "name": "framework-exe",
+      "totalMs": 48.00919999999951
+    },
+    {
+      "pair": 10,
+      "name": "native-exe",
+      "totalMs": 26.669199999999364
+    },
+    {
+      "pair": 10,
+      "name": "node",
+      "totalMs": 89.6216000000004
+    },
+    {
+      "pair": 11,
+      "name": "ps7",
+      "totalMs": 226.76230000000032
+    },
+    {
+      "pair": 11,
+      "name": "framework-exe",
+      "totalMs": 49.589500000000044
+    },
+    {
+      "pair": 11,
+      "name": "native-exe",
+      "totalMs": 25.65229999999974
+    },
+    {
+      "pair": 11,
+      "name": "node",
+      "totalMs": 92.30079999999998
+    },
+    {
+      "pair": 11,
+      "name": "ps51",
+      "totalMs": 184.7439999999997
+    },
+    {
+      "pair": 12,
+      "name": "framework-exe",
+      "totalMs": 51.22400000000016
+    },
+    {
+      "pair": 12,
+      "name": "native-exe",
+      "totalMs": 26.48990000000049
+    },
+    {
+      "pair": 12,
+      "name": "node",
+      "totalMs": 88.57679999999982
+    },
+    {
+      "pair": 12,
+      "name": "ps51",
+      "totalMs": 182.6823999999997
+    },
+    {
+      "pair": 12,
+      "name": "ps7",
+      "totalMs": 227.41449999999895
+    },
+    {
+      "pair": 13,
+      "name": "native-exe",
+      "totalMs": 24.608500000000276
+    },
+    {
+      "pair": 13,
+      "name": "node",
+      "totalMs": 88.5018999999993
+    },
+    {
+      "pair": 13,
+      "name": "ps51",
+      "totalMs": 183.8197
+    },
+    {
+      "pair": 13,
+      "name": "ps7",
+      "totalMs": 226.54300000000148
+    },
+    {
+      "pair": 13,
+      "name": "framework-exe",
+      "totalMs": 51.5601000000006
+    },
+    {
+      "pair": 14,
+      "name": "node",
+      "totalMs": 89.98689999999988
+    },
+    {
+      "pair": 14,
+      "name": "ps51",
+      "totalMs": 180.3262999999988
+    },
+    {
+      "pair": 14,
+      "name": "ps7",
+      "totalMs": 231.32010000000082
+    },
+    {
+      "pair": 14,
+      "name": "framework-exe",
+      "totalMs": 49.315599999999904
+    },
+    {
+      "pair": 14,
+      "name": "native-exe",
+      "totalMs": 23.98240000000078
+    },
+    {
+      "pair": 15,
+      "name": "node",
+      "totalMs": 88.52899999999863
+    },
+    {
+      "pair": 15,
+      "name": "native-exe",
+      "totalMs": 28.850099999999657
+    },
+    {
+      "pair": 15,
+      "name": "framework-exe",
+      "totalMs": 47.73250000000007
+    },
+    {
+      "pair": 15,
+      "name": "ps7",
+      "totalMs": 229.22110000000066
+    },
+    {
+      "pair": 15,
+      "name": "ps51",
+      "totalMs": 188.44690000000082
+    },
+    {
+      "pair": 16,
+      "name": "ps51",
+      "totalMs": 181.4947000000011
+    },
+    {
+      "pair": 16,
+      "name": "node",
+      "totalMs": 92.48739999999998
+    },
+    {
+      "pair": 16,
+      "name": "native-exe",
+      "totalMs": 23.811799999999494
+    },
+    {
+      "pair": 16,
+      "name": "framework-exe",
+      "totalMs": 47.8768
+    },
+    {
+      "pair": 16,
+      "name": "ps7",
+      "totalMs": 222.73090000000047
+    },
+    {
+      "pair": 17,
+      "name": "ps7",
+      "totalMs": 226.8869999999988
+    },
+    {
+      "pair": 17,
+      "name": "ps51",
+      "totalMs": 182.63500000000022
+    },
+    {
+      "pair": 17,
+      "name": "node",
+      "totalMs": 89.02579999999944
+    },
+    {
+      "pair": 17,
+      "name": "native-exe",
+      "totalMs": 26.722899999998845
+    },
+    {
+      "pair": 17,
+      "name": "framework-exe",
+      "totalMs": 52.341199999998935
+    },
+    {
+      "pair": 18,
+      "name": "framework-exe",
+      "totalMs": 46.233900000001086
+    },
+    {
+      "pair": 18,
+      "name": "ps7",
+      "totalMs": 262.8785000000007
+    },
+    {
+      "pair": 18,
+      "name": "ps51",
+      "totalMs": 184.77419999999984
+    },
+    {
+      "pair": 18,
+      "name": "node",
+      "totalMs": 93.23660000000018
+    },
+    {
+      "pair": 18,
+      "name": "native-exe",
+      "totalMs": 23.14379999999983
+    },
+    {
+      "pair": 19,
+      "name": "native-exe",
+      "totalMs": 23.796700000000783
+    },
+    {
+      "pair": 19,
+      "name": "framework-exe",
+      "totalMs": 45.835399999999936
+    },
+    {
+      "pair": 19,
+      "name": "ps7",
+      "totalMs": 218.6948999999986
+    },
+    {
+      "pair": 19,
+      "name": "ps51",
+      "totalMs": 178.2530000000006
+    },
+    {
+      "pair": 19,
+      "name": "node",
+      "totalMs": 88.568299999999
+    }
+  ],
+  "medians": {
+    "ps51": 182.65869999999995,
+    "ps7": 228.39625000000046,
+    "framework-exe": 50.58995000000027,
+    "native-exe": 25.596799999999803,
+    "node": 90.25000000000011
+  },
+  "comparisons": [
+    {
+      "baseline": "ps51",
+      "candidate": "ps7",
+      "pairedMedianSavedMs": -44.492049999998926,
+      "pairsWon": 0
+    },
+    {
+      "baseline": "ps51",
+      "candidate": "framework-exe",
+      "pairedMedianSavedMs": 132.19090000000006,
+      "pairsWon": 20
+    },
+    {
+      "baseline": "ps51",
+      "candidate": "native-exe",
+      "pairedMedianSavedMs": 157.1753500000009,
+      "pairsWon": 20
+    },
+    {
+      "baseline": "ps51",
+      "candidate": "node",
+      "pairedMedianSavedMs": 91.76154999999972,
+      "pairsWon": 20
+    }
+  ]
+}
